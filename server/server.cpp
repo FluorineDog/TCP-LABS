@@ -4,6 +4,8 @@ using std::endl;
 using std::cout;
 using std::cerr;
 using std::cin;
-int main(){
-	cout << "server" << endl;
+int main() {
+	int fake;
+	
+  cout << "server" << endl;
 }
