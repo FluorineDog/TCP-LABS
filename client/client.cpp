@@ -14,14 +14,15 @@ int main() {
   char ref_str[BUFFER_SIZE];
   while (true) {
     cin >> str;
-    int n = cin.gcount();
+    int n = strlen(str);
     client.writen(str, n);
-    int ref_n = client.readn(ref_str, BUFFER_SIZE);
+    int ref_n = client.read(ref_str, BUFFER_SIZE);
+    
     if (ref_n == 0) {
-      cerr << "[ERROR] server is done " << endl;
+      cerr << "[ERROR] server is gone " << endl;
       exit(-1);
     } else {
-      cout << ref_str << endl;;
+      cout <<  ref_n << "***" << ref_str << endl;
     }
   }
 }

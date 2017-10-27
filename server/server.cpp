@@ -6,12 +6,18 @@ using std::cout;
 using std::cerr;
 using std::cin;
 void workload(TCP conn) {
+  cerr << "thread created" << endl;
   char buf[BUFFER_SIZE];
   while (true) {
-		int nread = conn.readn(buf, BUFFER_SIZE);
-		cout << conn << "<*>" << buf << endl;
+    int nread = conn.read(buf, BUFFER_SIZE);
+    buf[nread] = '\0';
+    cout << conn << "<*>" << nread << "<$>" << buf << endl;
+    if(nread == 0 ){
+      break;
+    }
 		conn.writen(buf, nread);
   }
+  conn.close();
 }
 
 int main() {

@@ -16,6 +16,7 @@ public:
       exit(-1);
     }
   }
+
   void connect(const char *server_ip, in_port_t port) {
     create_addr(server_ip, port);
     int status = ::connect(fd, SAP(addr), addrlen());
@@ -55,8 +56,17 @@ public:
     }
     return TCP(connfd, cli_addr);
   }
-  int readline(char* buf, size_t n){
-    int 
+  int read(char *buf, size_t maxN) {
+    ssize_t nread = ::read(fd, buf, maxN);
+    if (nread == -1) {
+      cerr << "failed to " << __FUNCTION__ << endl;
+      exit(-1);
+    }
+    if(nread == 0){
+      // EOF is reached
+      return 0;
+    }
+    return nread;
   }
   int readn(char *buf, size_t n) {
     int raw_n = n;
@@ -68,12 +78,12 @@ public:
       }
       if (nread == 0) {
         // EOF reached
-        return raw_n - n;
         break;
       }
       buf += nread;
       n -= nread;
     }
+    return raw_n - n;
   }
   void writen(char *buf, size_t n) {
     while (n > 0) {
@@ -98,9 +108,10 @@ public:
     }
   }
   friend std::ostream &operator<<(std::ostream &out, const TCP &conn) {
+    // buggy
     char ip_buf[36];
     ::inet_ntop(AF_INET, &conn.addr.sin_addr, ip_buf, conn.addrlen());
-    out << ip_buf << ":" << conn.addr.sin_port;
+    return out << ip_buf << ":" << conn.addr.sin_port;
   }
 
 private:
