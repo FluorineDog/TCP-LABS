@@ -5,19 +5,20 @@ using std::endl;
 using std::cout;
 using std::cerr;
 using std::cin;
-void workload(TCP conn) {
-  cerr << "thread created" << endl;
+
+void Epoll::visitor(TCP conn) {
+
   char buf[BUFFER_SIZE];
-  while (true) {
-    int nread = conn.read(buf, BUFFER_SIZE);
-    buf[nread] = '\0';
-    cout << conn << "<*>" << nread << "<$>" << buf << endl;
-    if(nread == 0 ){
-      break;
-    }
-		conn.writen(buf, nread);
+  int nread = conn.read(buf, BUFFER_SIZE);
+  buf[nread] = '\0';
+  cout << conn.get_addr() << "<*>" << nread << "<$>" << buf << endl;
+  if (nread == 0) {
+    // is closed
+    this->erase(conn);
+    conn.close();
+    return;
   }
-  conn.close();
+  conn.writen(buf, nread);
 }
 
 int main() {
@@ -27,10 +28,10 @@ int main() {
   server.socket();
   server.bind();
   server.listen();
-  while (true) {
-    TCP conn = server.accept();
-    cerr << conn << endl;
-    std::thread t(workload, conn);
-    t.detach();
-  }
+  std::thread t([server_ = std::move(server)]() {
+    Epoll engine;
+    engine.set_server(server_);
+    engine.run();
+  });
+  t.join();
 }
