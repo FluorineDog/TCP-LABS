@@ -8,6 +8,10 @@
 class TCP {
 private:
 public:
+  // TCP(TCP&&) = default;
+  // TCP(const TCP&) = delete;
+  // TCP& operator=(TCP&&) = default;
+  // TCP& operator=(const TCP&) = delete;
   // fake;
   TCP() = default;
   TCP(int fd) : fd(fd) {}
@@ -63,7 +67,7 @@ public:
     return TCP(connfd);
   }
 
-  int read(char *buf, size_t maxN) {
+  int read(void *buf, size_t maxN) {
     ssize_t nread = ::read(fd, buf, maxN);
     if (nread == -1) {
       cerr << "failed to " << __FUNCTION__ << endl;
@@ -76,7 +80,8 @@ public:
     return nread;
   }
 
-  int readn(char *buf, size_t n) {
+  int readn(void *buf_, size_t n) {
+    char *buf = (char *)buf_;
     int raw_n = n;
     while (n > 0) {
       ssize_t nread = ::read(fd, buf, n);
@@ -94,7 +99,8 @@ public:
     return raw_n - n;
   }
 
-  void writen(char *buf, size_t n) {
+  void writen(const void *buf_, size_t n) {
+    auto buf = (const char *)buf_;
     while (n > 0) {
       ssize_t nread = ::write(fd, buf, n);
       if (nread == -1) {
@@ -194,7 +200,7 @@ public:
         cerr << "error at " << __FUNCTION__ << endl;
         exit(-1);
       }
-      
+
       if (event.data.fd == server) {
         // in coming connection
         insert(server.accept());

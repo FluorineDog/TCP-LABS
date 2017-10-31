@@ -16,12 +16,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <string>
 // }
 
 using std::cerr;
+using std::cin;
+using std::string;
 using std::cout;
 using std::endl;
-const char* SERVER_IP = "127.0.0.1";
+#define SERVER_IP "127.0.0.1"
 constexpr in_port_t SERVER_PORT = 30000;
 constexpr int BUFFER_SIZE = 1024;
 constexpr int LISTENQ = 1024;

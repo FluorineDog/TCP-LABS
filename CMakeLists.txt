@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 project(dog_chatter)
+add_subdirectory(protocol)
 add_subdirectory(client)
 add_subdirectory(server)
 add_subdirectory(dirty_test)
+

@@ -3,7 +3,6 @@ using namespace std;
 // #include "str_const.h"
 #include <gtest/gtest.h>
 // #include <openssl/crypto.h>
-#include
 #include <sqlite3.h>
 // struct Factory {
 //   Factory(const char *str) : str(str) {}
@@ -18,6 +17,7 @@ TEST(libcrypto, base) {}
 TEST(sqlite, base) {
   sqlite3 *db;
   char *errmsg;
+  const char *tail;
   sqlite3_open("test.db", &db);
   sqlite3_exec(db, "select * from account_info",
                [](void *, int n, char **strs, char **names) {
@@ -29,7 +29,15 @@ TEST(sqlite, base) {
                  return 0;
                },
                nullptr, &errmsg);
-  EXPECT_EQ(errmsg, nullptr);
-  sqlite3_prepare_v2(db, "select * from account_info", ;
+  
+  // EXPECT_EQ(4, strlen(errmsg));
+  EXPECT_EQ(nullptr, errmsg);
+  sqlite3_stmt *stmt;
+  sqlite3_prepare_v2(db, "select * from account_info", -1, &stmt, &tail);
+  // sqlite3_bind_ 
+  sqlite3_step(stmt);
+  // cerr << "$" << tail << "$";
+  EXPECT_EQ(0, tail[0]);
+  sqlite3_finalize(stmt);
   // cerr << errmsg;
 }
