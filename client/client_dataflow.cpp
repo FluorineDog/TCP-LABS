@@ -16,7 +16,10 @@
 std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
   DataFlowType s;
   cerr << "begin read typeid" << endl;
-  conn.readn(&s, sizeof(s));
+  int status = conn.readn(&s, sizeof(s));
+  if(status == 0){
+    return nullptr;
+  }
   std::unique_ptr<RawData> data;
   switch (s) {
     // case DataFlowType::Registion:
@@ -26,7 +29,7 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     CLIENTCASE(OpStatus);
   default:
     cerr << "unknown typeid" << endl;
-    return 0;
+    exit(-1);
   }
   return data;
 }

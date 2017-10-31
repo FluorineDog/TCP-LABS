@@ -20,6 +20,10 @@ void registion(TCP conn) {
 void listener(TCP conn) {
   while (true) {
     auto data = RawData::get_type(conn);
+    if(data == nullptr){
+      cerr << "server is down" << endl;
+      exit(-1);
+    }
     data->read_data(conn);
     data->action(conn);
   }

@@ -8,11 +8,16 @@ using std::cout;
 using std::cerr;
 using std::cin;
 
-
-
 void Epoll::visitor(TCP conn) {
   cerr << "try getting type";
   auto data = RawData::get_type(conn);
+  if (data == nullptr) {
+    // client is closed
+    cerr << "client is down" << endl;
+    this->erase(conn);
+    conn.close();
+    return;
+  }
   data->read_data(conn);
   data->action(conn);
   // char buf[BUFFER_SIZE];

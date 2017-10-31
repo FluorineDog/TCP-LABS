@@ -12,9 +12,14 @@
 
 #define SERVERCASE(type) NEWCASE(type)
 #define CLIENTCASE(type) FAKECASE(type)
+
 std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
   DataFlowType s;
-  conn.readn((char *)&s, sizeof(s));
+  cerr << "begin read typeid" << endl;
+  int status = conn.readn(&s, sizeof(s));
+  if(status == 0){
+    return nullptr;
+  }
   std::unique_ptr<RawData> data;
   switch (s) {
     // case DataFlowType::Registion:
@@ -22,9 +27,13 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     // }
     SERVERCASE(Registion);
     CLIENTCASE(OpStatus);
+  default:
+    cerr << "unknown typeid" << endl;
+    exit(-1);
   }
   return data;
 }
+
 #undef SERVERCASE
 #undef CLIENTCASE
 #undef NEWCASE
@@ -41,4 +50,3 @@ void Registion::action(TCP conn) {
   OpStatus::Raw data{0, "update succeed"};
   data.send_data(conn);
 }
-

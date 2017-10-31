@@ -13,7 +13,7 @@ enum class DataFlowType {
 
 class RawData {
 public:
-  virtual void read_data(TCP conn) = 0;
+  virtual int read_data(TCP conn) = 0;
   // static void send_data(TCP conn) = 0;
   virtual void action(TCP conn) = 0;
   static std::unique_ptr<RawData> get_type(TCP &conn);
@@ -27,7 +27,9 @@ protected:
 // make AM great again
 class Registion : public RawData {
 public:
-  virtual void read_data(TCP conn) override { conn.readn(&raw, sizeof(raw)); }
+  virtual int read_data(TCP conn) override {
+    return conn.readn(&raw, sizeof(raw));
+  }
   virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
@@ -46,9 +48,9 @@ public:
 // make AM great again
 class OpStatus : public RawData {
 public:
-  virtual void read_data(TCP conn) override {
+  virtual int read_data(TCP conn) override {
     // read from socket
-    conn.readn(&raw, sizeof(raw));
+    return conn.readn(&raw, sizeof(raw));
   }
   virtual void action(TCP conn) override;
   struct Raw {
