@@ -31,7 +31,7 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
 #undef FAKECASE
 
 // in server
-void Registion::action() {
+void Registion::action(TCP conn) {
   // in server
   // check if is in database
   cerr << "get account:" << raw.account << endl;
@@ -39,5 +39,6 @@ void Registion::action() {
   cerr << "get passwd:" << raw.pass_md5 << endl;
   // seems to have put it into db
   OpStatus::Raw data{0, "update succeed"};
+  data.send_data(conn);
 }
 

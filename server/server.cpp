@@ -11,9 +11,10 @@ using std::cin;
 
 
 void Epoll::visitor(TCP conn) {
+  cerr << "try getting type";
   auto data = RawData::get_type(conn);
   data->read_data(conn);
-  data->action();
+  data->action(conn);
   // char buf[BUFFER_SIZE];
   // int nread = conn.read(buf, BUFFER_SIZE);
   // buf[nread] = '\0';

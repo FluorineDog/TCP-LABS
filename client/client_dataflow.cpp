@@ -15,7 +15,8 @@
 
 std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
   DataFlowType s;
-  conn.readn((char *)&s, sizeof(s));
+  cerr << "begin read typeid" << endl;
+  conn.readn(&s, sizeof(s));
   std::unique_ptr<RawData> data;
   switch (s) {
     // case DataFlowType::Registion:
@@ -23,6 +24,9 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     // }
     SERVERCASE(Registion);
     CLIENTCASE(OpStatus);
+  default:
+    cerr << "unknown typeid" << endl;
+    return 0;
   }
   return data;
 }
@@ -33,7 +37,7 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
 #undef FAKECASE
 
 // in client
-void OpStatus::action() {
+void OpStatus::action(TCP conn) {
   // in server
   // check if is in database
   cerr << "get status:" << raw.status << endl;

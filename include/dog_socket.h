@@ -81,6 +81,7 @@ public:
   }
 
   int readn(void *buf_, size_t n) {
+    cerr << "wanna receive" << n << endl;
     char *buf = (char *)buf_;
     int raw_n = n;
     while (n > 0) {
@@ -96,13 +97,17 @@ public:
       buf += nread;
       n -= nread;
     }
+    
+    cerr << "receiving " << n << "bytes" << endl;
     return raw_n - n;
   }
 
   void writen(const void *buf_, size_t n) {
+    cerr << "sending " << n << " bytes" << endl;
     auto buf = (const char *)buf_;
     while (n > 0) {
       ssize_t nread = ::write(fd, buf, n);
+      cerr << "nread" << nread << endl;
       if (nread == -1) {
         cerr << "failed to " << __FUNCTION__ << endl;
         exit(-1);

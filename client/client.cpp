@@ -6,33 +6,34 @@ using std::cout;
 using std::cerr;
 using std::endl;
 
-void registion(TCP conn){
-	Registion::Raw data;
-	cin >> data.account;
-	cin >> data.nickname;
-	cin >> data.pass_md5;
-	std::thread go([&](){
-		data.send_data(conn);
-  });
-  go.detach();
+void registion(TCP conn) {
+  Registion::Raw data;
+  cin >> data.account;
+  cin >> data.nickname;
+  cin >> data.pass_md5;
+  // std::thread go([ ata ]() {
+  // fake
+  data.send_data(conn);
+  // });
 }
 
-void listener(TCP conn){
-  while(true){
+void listener(TCP conn) {
+  while (true) {
     auto data = RawData::get_type(conn);
     data->read_data(conn);
-    data->action();
+    data->action(conn);
   }
 }
 
 int main() {
-  int fake;
   cout << "client" << endl;
   TCP client;
   client.socket();
   client.connect(SERVER_IP, SERVER_PORT);
   char str[BUFFER_SIZE];
   char ref_str[BUFFER_SIZE];
+  std::thread go(listener, client);
+  go.detach();
   while (true) {
     string req;
     // wait for event

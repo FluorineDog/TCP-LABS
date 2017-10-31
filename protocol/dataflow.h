@@ -3,21 +3,19 @@
 
 #include "../include/common.h"
 #include "../include/dog_socket.h"
-#include <memory>
 #include <cassert>
+#include <memory>
 
 enum class DataFlowType {
   Type_Registion,
   Type_OpStatus,
 };
 
-
-
 class RawData {
 public:
   virtual void read_data(TCP conn) = 0;
   // static void send_data(TCP conn) = 0;
-  virtual void action() = 0;
+  virtual void action(TCP conn) = 0;
   static std::unique_ptr<RawData> get_type(TCP &conn);
 
 protected:
@@ -30,9 +28,10 @@ protected:
 class Registion : public RawData {
 public:
   virtual void read_data(TCP conn) override { conn.readn(&raw, sizeof(raw)); }
-  virtual void action() override;
+  virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
+      cerr << "sending regi" << endl;
       constexpr auto id = DataFlowType::Type_Registion;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
@@ -47,14 +46,15 @@ public:
 // make AM great again
 class OpStatus : public RawData {
 public:
-  static constexpr auto id = DataFlowType::Type_Registion;
   virtual void read_data(TCP conn) override {
     // read from socket
     conn.readn(&raw, sizeof(raw));
   }
-  virtual void action() override;
+  virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
+      cerr << "sending opt" << endl;
+      const auto id = DataFlowType::Type_OpStatus;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
     }
