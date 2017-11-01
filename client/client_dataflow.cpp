@@ -37,3 +37,7 @@ void LoginReply::action(TCP conn) {
   cerr << "get info:" << raw.message << endl;
   cerr << "get fuck:" << raw.nickname << endl;
 }
+
+void SendMessage::action(TCP conn) {
+  cerr << "get message " << raw.message << " from " << raw.sender;
+}

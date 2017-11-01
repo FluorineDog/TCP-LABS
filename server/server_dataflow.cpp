@@ -41,14 +41,22 @@ void Registion::action(TCP conn) {
   OpStatus::Raw{0, "succceed"}.send_data(conn);
 }
 
-extern std::map<TCP, string> conn_to_account;
+// extern std::map<int, string> conn_to_account;
+extern std::map<string, int> account_to_conn;
 
 void LoginIn::action(TCP conn) {
+  LOG((int)conn);
   // in server
   // check if is in atabase
   cerr << "get request account:" << raw.account << endl;
   cerr << "get passwd:" << raw.pass_md5 << endl;
   // seems to have put it into db
+  if (account_to_conn.find(raw.account) != account_to_conn.end()) {
+    OpStatus::Raw data{-1, "Logged in elsewhwere"};
+    data.send_data(conn);
+    return;
+  }
+
   static sqlite::query q(
       sql, "SELECT password, salt, nickname from accounts where account=?");
   q.clear();
@@ -62,7 +70,8 @@ void LoginIn::action(TCP conn) {
     if (true_pass == raw.pass_md5) {
       string nickname = result->get_string(2);
       LoginReply::Raw data{0, "login succeed"};
-      conn_to_account[conn] = string;
+      // conn_to_account[conn] = raw.account;
+      account_to_conn[raw.account] = conn;
       strncpy(data.nickname, nickname.c_str(), 32);
       data.send_data(conn);
       return;
@@ -71,4 +80,22 @@ void LoginIn::action(TCP conn) {
   OpStatus::Raw data{-1, "wrong account or password"};
   data.send_data(conn);
   return;
+}
+
+void SendMessage::action(TCP conn) {
+  const auto &lookup = account_to_conn;
+  auto iter = lookup.find(raw.receiver);
+  if (iter != lookup.end()) {
+    // directly send
+    // assert(false);
+    cerr << iter->second;
+    TCP receiver_conn(iter->second);
+    raw.send_data(receiver_conn);
+  } else {
+    //
+    static sqlite::execute cmd(sql, "INSERT INTO message VALUES(NULL,?,?,?,?)");
+    cmd.clear();
+    cmd % raw.sender % raw.receiver % raw.timestamp % raw.message;
+    cmd();
+  }
 }

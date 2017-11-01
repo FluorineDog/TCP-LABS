@@ -1,4 +1,6 @@
 #include "../protocol/dataflow.h"
+#define BOTHCASE(name) NEWCASE(name)
+
 std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
   DataFlowType s;
   cerr << "begin read typeid" << endl;
@@ -15,12 +17,15 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     CLIENTCASE(OpStatus);
     SERVERCASE(LoginIn);
     CLIENTCASE(LoginReply);
+    BOTHCASE(SendMessage);
   default:
     cerr << "unknown typeid" << endl;
     exit(-1);
   }
   return data;
 }
+
+
 
 #undef SERVERCASE
 #undef CLIENTCASE

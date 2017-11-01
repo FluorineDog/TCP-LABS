@@ -34,6 +34,16 @@ void log_in(TCP conn) {
   data.send_data(conn);
 }
 
+void sendmsg(TCP conn) {
+  SendMessage::Raw data;
+  cin >> data.receiver;
+  data.timestamp = time(NULL);
+  COPY(data.sender, global.account.c_str());
+  cin >> data.message;
+  std::lock_guard<std::mutex> lck(send_mutex);
+  data.send_data(conn);
+}
+
 void listener(TCP conn) {
   while (true) {
     auto data = RawData::get_type(conn);
@@ -67,6 +77,8 @@ int main() {
       // onEvent click
       // easily parallel
       log_in(client);
+    } else if (req == "send") {
+      sendmsg(client);
     } else {
       cout << "ignored" << endl;
     }

@@ -35,7 +35,9 @@ using std::tuple;
 using boost::shared_ptr;
 using std::map;
 
-#define LOG(expr) std:::cerr << #expr << (expr) << endl
+#define COPY(dest, src) strncpy(dest, src, 32)
+
+#define LOG(expr) std::cerr <<"*** " #expr << " <*> " << (expr) << endl
 #define SERVER_IP "127.0.0.1"
 constexpr in_port_t SERVER_PORT = 30000;
 constexpr int BUFFER_SIZE = 1024;

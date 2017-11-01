@@ -11,6 +11,7 @@ enum class DataFlowType {
   Type_OpStatus,
   Type_LoginIn,
   Type_LoginReply,
+  Type_SendMessage,
 };
 
 class RawData {
@@ -83,7 +84,7 @@ public:
   } raw;
 };
 
-class LoginReply: public RawData {
+class LoginReply : public RawData {
 public:
   virtual int read_data(TCP conn) override {
     // read from socket
@@ -98,8 +99,47 @@ public:
     }
     int status;
     char message[32];
-    char nickname[32];    
+    char nickname[32];
   } raw;
 };
+
+class SendMessage : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    // read from socket
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      const auto id = DataFlowType::Type_SendMessage;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char sender[32];
+    char receiver[32];
+    time_t timestamp;
+    char message[512];
+  } raw;
+};
+
+// class ForwardMessage: public RawData {
+// public:
+//   virtual int read_data(TCP conn) override {
+//     // read from socket
+//     return conn.readn(&raw, sizeof(raw));
+//   }
+//   virtual void action(TCP conn) override;
+//   struct Raw {
+//     void send_data(TCP conn) {
+//       const auto id = DataFlowType::Type_LoginReply;
+//       conn.writen(&id, sizeof(id));
+//       conn.writen(this, sizeof(raw));
+//     }
+//     int status;
+//     char message[32];
+//     char nickname[32];
+//   } raw;
+// };
 
 #endif // DOG_DATAFLOW_H_
