@@ -1,4 +1,3 @@
-#include "../protocol/dataflow.h"
 #define NEWCASE(type)                                                          \
   case DataFlowType::Type_##type:                                              \
     data = std::make_unique<type>();                                           \
@@ -12,33 +11,7 @@
 #define SERVERCASE(type) NEWCASE(type)
 #define CLIENTCASE(type) FAKECASE(type)
 
-std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
-  DataFlowType s;
-  cerr << "begin read typeid" << endl;
-  int status = conn.readn(&s, sizeof(s));
-  if (status == 0) {
-    return nullptr;
-  }
-  std::unique_ptr<RawData> data;
-  switch (s) {
-    // case DataFlowType::Registion:
-    // data = std::make_unique<Registion>(new Registion);
-    // }
-    SERVERCASE(Registion);
-    CLIENTCASE(OpStatus);
-    SERVERCASE(LoginIn);
-    CLIENTCASE(LoginReply);
-  default:
-    cerr << "unknown typeid" << endl;
-    exit(-1);
-  }
-  return data;
-}
-
-#undef SERVERCASE
-#undef CLIENTCASE
-#undef NEWCASE
-#undef FAKECASE
+#include "../protocol/gen_dataflow.h"
 
 extern sqlite::connection sql;
 
@@ -68,6 +41,8 @@ void Registion::action(TCP conn) {
   OpStatus::Raw{0, "succceed"}.send_data(conn);
 }
 
+extern std::map<TCP, string> conn_to_account;
+
 void LoginIn::action(TCP conn) {
   // in server
   // check if is in atabase
@@ -87,6 +62,7 @@ void LoginIn::action(TCP conn) {
     if (true_pass == raw.pass_md5) {
       string nickname = result->get_string(2);
       LoginReply::Raw data{0, "login succeed"};
+      conn_to_account[conn] = string;
       strncpy(data.nickname, nickname.c_str(), 32);
       data.send_data(conn);
       return;

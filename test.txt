@@ -1,0 +1,15 @@
+register
+dog2
+1
+1
+register
+dog
+wang
+mike
+login
+dog
+miao
+login
+dog
+wang
+

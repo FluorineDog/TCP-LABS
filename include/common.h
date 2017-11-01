@@ -33,6 +33,7 @@ using std::cout;
 using std::endl;
 using std::tuple;
 using boost::shared_ptr;
+using std::map;
 
 #define LOG(expr) std:::cerr << #expr << (expr) << endl
 #define SERVER_IP "127.0.0.1"
