@@ -1,26 +1,43 @@
 #include "../include/common.h"
 #include "../include/dog_socket.h"
 #include "../protocol/dataflow.h"
+#include <mutex>
 using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-
+int client = rand();
+struct {
+  string account;
+  string passwd;
+} global;
+std::mutex send_mutex;
 void registion(TCP conn) {
   Registion::Raw data;
   cin >> data.account;
-  cin >> data.nickname;
   cin >> data.pass_md5;
+  cin >> data.nickname;
   // std::thread go([ ata ]() {
   // fake
+  std::lock_guard<std::mutex> lck(send_mutex);
   data.send_data(conn);
   // });
+}
+void log_in(TCP conn) {
+  LoginIn::Raw data;
+  cin >> data.account;
+  cin >> data.pass_md5;
+  global.account = data.account;
+  global.passwd = data.pass_md5;
+
+  std::lock_guard<std::mutex> lck(send_mutex);
+  data.send_data(conn);
 }
 
 void listener(TCP conn) {
   while (true) {
     auto data = RawData::get_type(conn);
-    if(data == nullptr){
+    if (data == nullptr) {
       cerr << "server is down" << endl;
       exit(-1);
     }
@@ -38,14 +55,18 @@ int main() {
   char ref_str[BUFFER_SIZE];
   std::thread go(listener, client);
   go.detach();
-  while (true) {
-    string req;
+  string req;
+  while (cin >> req) {
     // wait for event
-    cin >> req;
-    if (req == "register") {
+    if (false) {
+    } else if (req == "register") {
       // onEvent click
       // easily parallel
       registion(client);
+    } else if (req == "login") {
+      // onEvent click
+      // easily parallel
+      log_in(client);
     } else {
       cout << "ignored" << endl;
     }

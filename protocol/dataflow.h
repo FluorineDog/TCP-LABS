@@ -9,6 +9,8 @@
 enum class DataFlowType {
   Type_Registion,
   Type_OpStatus,
+  Type_LoginIn,
+  Type_LoginReply,
 };
 
 class RawData {
@@ -33,14 +35,31 @@ public:
   virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
-      cerr << "sending regi" << endl;
       constexpr auto id = DataFlowType::Type_Registion;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
     }
     char account[32];
-    char nickname[32];
     char pass_md5[32];
+    char nickname[32];
+  } raw;
+};
+
+class LoginIn : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      constexpr auto id = DataFlowType::Type_LoginIn;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char account[32];
+    char pass_md5[32];
+    // char nickname[32];
   } raw;
 };
 
@@ -55,13 +74,31 @@ public:
   virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
-      cerr << "sending opt" << endl;
       const auto id = DataFlowType::Type_OpStatus;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
     }
     int status;
     char message[32];
+  } raw;
+};
+
+class LoginReply: public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    // read from socket
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      const auto id = DataFlowType::Type_LoginReply;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    int status;
+    char message[32];
+    char nickname[32];    
   } raw;
 };
 

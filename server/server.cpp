@@ -7,7 +7,15 @@ using std::endl;
 using std::cout;
 using std::cerr;
 using std::cin;
+#include <map>
+#include <tuple>
+using std::map;
+using std::string;
+using std::tuple;
 
+sqlite::connection sql("data/server.db");
+
+map<TCP, tuple<string>> incoming_conn;
 void Epoll::visitor(TCP conn) {
   cerr << "try getting type";
   auto data = RawData::get_type(conn);
@@ -20,17 +28,6 @@ void Epoll::visitor(TCP conn) {
   }
   data->read_data(conn);
   data->action(conn);
-  // char buf[BUFFER_SIZE];
-  // int nread = conn.read(buf, BUFFER_SIZE);
-  // buf[nread] = '\0';
-  // cout << conn.get_addr() << "<*>" << nread << "<$>" << buf << endl;
-  // if (nread == 0) {
-  //   // is closed
-  //   this->erase(conn);
-  //   conn.close();
-  //   return;
-  // }
-  // conn.writen(buf, nread);
 }
 
 int main() {
