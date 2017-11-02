@@ -24,7 +24,7 @@ void Registion::action(TCP conn) {
   // check if is in database
   cerr << "get account:" << raw.account << endl;
   cerr << "get passwd:" << raw.pass_md5 << endl;
-  cerr << "get nikename:" << raw.nickname << endl;
+  cerr << "get nickname:" << raw.nickname << endl;
   // seems to have put it into db
   static sqlite::execute cmd(sql, "INSERT INTO accounts VALUES(?,?,?,?)");
   cmd.clear();
@@ -42,7 +42,7 @@ void Registion::action(TCP conn) {
 }
 
 // extern std::map<int, string> conn_to_account;
-extern std::map<string, int> account_to_conn;
+extern std::map<string, int> lookup;
 
 void send_offline_message(TCP conn, const string &receiver);
 
@@ -53,7 +53,7 @@ void LoginIn::action(TCP conn) {
   cerr << "get request account:" << raw.account << endl;
   cerr << "get passwd:" << raw.pass_md5 << endl;
   // seems to have put it into db
-  if (account_to_conn.find(raw.account) != account_to_conn.end()) {
+  if (lookup.find(raw.account) != lookup.end()) {
     OpStatus::Raw data{-1, "Logged in elsewhwere"};
     data.send_data(conn);
     return;
@@ -73,7 +73,7 @@ void LoginIn::action(TCP conn) {
       string nickname = result->get_string(2);
       LoginReply::Raw data{0, "login succeed"};
       // conn_to_account[conn] = raw.account;
-      account_to_conn[raw.account] = conn;
+      lookup[raw.account] = conn;
       COPY(data.nickname, nickname);
       data.send_data(conn);
       send_offline_message(conn, raw.account);
@@ -86,7 +86,6 @@ void LoginIn::action(TCP conn) {
 }
 
 void SendMessage::action(TCP conn) {
-  const auto &lookup = account_to_conn;
   auto iter = lookup.find(raw.receiver);
   if (iter != lookup.end()) {
     // directly send
@@ -124,3 +123,15 @@ void send_offline_message(TCP conn, const string &receiver) {
   cmd();
 }
 
+void P2PRequest::action(TCP conn) {
+  auto iter = lookup.find(raw.receiver);
+  if (iter != lookup.end()) {
+    auto addr = conn.getpeername();
+    raw.listener_ip = ::ntohl(addr.sin_addr.s_addr);
+    LOG(addr);
+    LOG(raw.listener_port);
+    raw.send_data(iter->second);
+  } else {
+    OpStatus::Raw{-1, "User offline"}.send_data(conn);
+  }
+}

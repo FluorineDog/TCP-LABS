@@ -18,6 +18,8 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     SERVERCASE(LoginIn);
     CLIENTCASE(LoginReply);
     BOTHCASE(SendMessage);
+    BOTHCASE(P2PRequest);
+    CLIENTCASE(P2PLogin);
   default:
     cerr << "unknown typeid" << endl;
     exit(-1);

@@ -22,8 +22,31 @@ public:
       exit(-1);
     }
   }
+  sockaddr_in getsockname() {
+    // std::pair<sockaddr_in, in_port_t> ip_port;
+    sockaddr_in addr;
+    auto len = addrlen();
+    int status = ::getsockname(fd, SAP(addr), &len);
+    if (status == -1) {
+      cerr << "failed to " << __FUNCTION__ << endl;
+      exit(-1);
+    }
+    return addr;
+  }
 
-  void connect(const char *server_ip, in_port_t port) {
+  sockaddr_in getpeername() {
+    // std::pair<sockaddr_in, in_port_t> ip_port;
+    sockaddr_in addr;
+    auto len = addrlen();
+    int status = ::getpeername(fd, SAP(addr), &len);
+    if (status == -1) {
+      cerr << "failed to " << __FUNCTION__ << endl;
+      exit(-1);
+    }
+    return addr;
+  }
+
+  void connect(const auto server_ip, in_port_t port) {
     // connect to server
     auto addr = create_addr(server_ip, port);
     int status = ::connect(fd, SAP(addr), addrlen());
@@ -33,9 +56,9 @@ public:
     }
   }
 
-  void bind() {
+  void bind(in_port_t port) {
     // bind to given port
-    auto addr = create_addr(INADDR_ANY, SERVER_PORT);
+    auto addr = create_addr(INADDR_ANY, port);
     int status = ::bind(fd, SAP(addr), addrlen());
     if (status == -1) {
       cerr << "failed to " << __FUNCTION__ << endl;
@@ -176,16 +199,9 @@ private:
   int fd;
 };
 
-class UDP {
-public:
-  // fake;
-private:
-  // fake:
-};
-
 class Epoll {
 public:
-  Epoll() { epollfd = epoll_create1(0); }
+  Epoll() : server(-1) { epollfd = epoll_create1(0); }
   void set_server(TCP server_) {
     this->server = server_;
     int status = insert(server);
@@ -228,6 +244,7 @@ public:
     event.data.fd = fd;
     return epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   }
+
 private:
   TCP server;
   int epollfd;

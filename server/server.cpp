@@ -15,7 +15,7 @@ using std::tuple;
 
 sqlite::connection sql("data/server.db");
 // std::map<int, string> conn_to_account;
-std::map<string, int> account_to_conn;
+std::map<string, int> lookup;
 
 map<TCP, tuple<string>> incoming_conn;
 void Epoll::visitor(TCP conn) {
@@ -24,10 +24,9 @@ void Epoll::visitor(TCP conn) {
   if (data == nullptr) {
     // client is closed
     cerr << "client is down" << endl;
-    for (auto iter = account_to_conn.begin(); iter != account_to_conn.end();
-         ++iter) {
+    for (auto iter = lookup.begin(); iter != lookup.end(); ++iter) {
       if (iter->second == conn) {
-        account_to_conn.erase(iter);
+        lookup.erase(iter);
         break;
       }
     }
@@ -44,7 +43,9 @@ int main() {
   cout << "server" << endl;
   TCP server;
   server.socket();
-  server.bind();
+  int optval = 1;
+  setsockopt(server, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+  server.bind(SERVER_PORT);
   server.listen();
   std::thread t(
       [](TCP server) {

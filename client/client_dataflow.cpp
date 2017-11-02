@@ -1,5 +1,14 @@
 #include "../protocol/dataflow.h"
 
+extern struct Global {
+  string account;
+  string passwd;
+  TCP client;
+  TCP self_server;
+  map<string, TCP> lookup;
+  Epoll engine;
+} global;
+
 #define NEWCASE(type)                                                          \
   case DataFlowType::Type_##type:                                              \
     data = std::make_unique<type>();                                           \
@@ -40,4 +49,55 @@ void LoginReply::action(TCP conn) {
 
 void SendMessage::action(TCP conn) {
   cerr << "get message " << raw.message << " from " << raw.sender;
+}
+
+void P2PRequest::action(TCP) {
+  TCP new_conn;
+  new_conn.socket();
+  // TODO buggy
+  new_conn.connect(raw.listener_ip, raw.listener_port);
+  global.engine.insert(new_conn);
+  global.lookup[raw.sender] = new_conn;
+  LOG(raw.listener_port);
+  LOG(raw.sender);
+  LOG(new_conn);
+  P2PLogin::Raw login_data;
+  COPY(login_data.peer, global.account);
+  // add link to lookup
+  login_data.send_data(new_conn);
+}
+
+void Epoll::visitor(TCP conn) {
+  cerr << "try getting type";
+  auto data = RawData::get_type(conn);
+  if (data == nullptr) {
+    if (conn == global.client) {
+      // server is killed
+      global.client = -1;
+      cerr << "server is down. Please reconnect" << endl;
+      this->erase(conn);
+      conn.close();
+      return;
+    } else {
+      // client is closed
+      cerr << "peer is down" << endl;
+      for (auto iter = global.lookup.begin(); iter != global.lookup.end();
+           ++iter) {
+        if (iter->second == conn) {
+          global.lookup.erase(iter);
+          break;
+        }
+      }
+      this->erase(conn);
+      conn.close();
+      return;
+    }
+  }
+  data->read_data(conn);
+  data->action(conn);
+}
+
+void P2PLogin::action(TCP conn) {
+  // add link to lookup
+  global.lookup[raw.peer] = conn;
 }
