@@ -35,7 +35,11 @@ using std::tuple;
 using boost::shared_ptr;
 using std::map;
 
-#define COPY(dest, src) strncpy(dest, src, 32)
+// #define COPY(dest, src) strncpy(dest, src, 32)
+template<int N>
+inline void COPY(char (&dest)[N], const string& src){
+	strncpy(dest, src.c_str(), N);
+}
 
 #define LOG(expr) std::cerr <<"*** " #expr << " <*> " << (expr) << endl
 #define SERVER_IP "127.0.0.1"

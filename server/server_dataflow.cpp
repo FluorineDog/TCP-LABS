@@ -44,6 +44,8 @@ void Registion::action(TCP conn) {
 // extern std::map<int, string> conn_to_account;
 extern std::map<string, int> account_to_conn;
 
+void send_offline_message(TCP conn, const string &receiver);
+
 void LoginIn::action(TCP conn) {
   LOG((int)conn);
   // in server
@@ -72,8 +74,9 @@ void LoginIn::action(TCP conn) {
       LoginReply::Raw data{0, "login succeed"};
       // conn_to_account[conn] = raw.account;
       account_to_conn[raw.account] = conn;
-      strncpy(data.nickname, nickname.c_str(), 32);
+      COPY(data.nickname, nickname);
       data.send_data(conn);
+      send_offline_message(conn, raw.account);
       return;
     }
   }
@@ -99,3 +102,25 @@ void SendMessage::action(TCP conn) {
     cmd();
   }
 }
+
+void send_offline_message(TCP conn, const string &receiver) {
+  static sqlite::query q(sql, "SELECT rowid, receiver, timestamp, message"
+                              " FROM message WHERE receiver=?");
+  q.clear();
+  q % receiver;
+  auto result = q.get_result();
+
+  SendMessage::Raw data;
+  COPY(data.receiver, receiver);
+  while (result->next_row()) {
+    COPY(data.sender, result->get_string(1));
+    data.timestamp = result->get_int64(2);
+    COPY(data.message, result->get_string(3));
+    data.send_data(conn);
+  }
+  static sqlite::execute cmd(sql, "DELETE FROM message WHERE receiver=?");
+  cmd.clear();
+  cmd % receiver;
+  cmd();
+}
+

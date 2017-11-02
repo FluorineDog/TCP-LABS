@@ -6,12 +6,12 @@ using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
-int client = rand();
 struct {
   string account;
   string passwd;
 } global;
 std::mutex send_mutex;
+
 void registion(TCP conn) {
   Registion::Raw data;
   cin >> data.account;
@@ -38,7 +38,7 @@ void sendmsg(TCP conn) {
   SendMessage::Raw data;
   cin >> data.receiver;
   data.timestamp = time(NULL);
-  COPY(data.sender, global.account.c_str());
+  COPY(data.sender, global.account);
   cin >> data.message;
   std::lock_guard<std::mutex> lck(send_mutex);
   data.send_data(conn);
@@ -66,6 +66,7 @@ int main() {
   std::thread go(listener, client);
   go.detach();
   string req;
+  cout << ">";
   while (cin >> req) {
     // wait for event
     if (false) {
@@ -82,6 +83,7 @@ int main() {
     } else {
       cout << "ignored" << endl;
     }
+    cout << ">";
   }
   // while (true) {
   //   cin >> str;

@@ -97,7 +97,6 @@ public:
       buf += nread;
       n -= nread;
     }
-    
     cerr << "receiving " << n << "bytes" << endl;
     return raw_n - n;
   }
@@ -223,13 +222,13 @@ public:
     return epoll_ctl(epollfd, EPOLL_CTL_DEL, fd, &event);
   }
 
-private:
   int insert(int fd) {
     epoll_event event;
     event.events = EPOLLIN;
     event.data.fd = fd;
     return epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event);
   }
+private:
   TCP server;
   int epollfd;
 };
