@@ -101,3 +101,19 @@ void P2PLogin::action(TCP conn) {
   // add link to lookup
   global.lookup[raw.peer] = conn;
 }
+
+void FileSendRequest::action(TCP conn) {
+  // message box
+  LOG(raw.file_path);
+  LOG(raw.file_length);
+  LOG(raw.sender);
+}
+
+void FileSendAccept::action(TCP conn) {
+  cerr << "wtf";
+  exit(-1);
+  // message box
+  // LOG(raw.file_path);
+  // LOG(raw.file_length);
+  // LOG(raw.sender);
+}

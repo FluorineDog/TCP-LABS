@@ -14,6 +14,8 @@ enum class DataFlowType {
   Type_SendMessage,
   Type_P2PRequest,
   Type_P2PLogin,
+  Type_FileSendRequest,
+  Type_FileSendAccept,
 };
 
 class RawData {
@@ -162,5 +164,44 @@ public:
   } raw;
 };
 
+class FileSendRequest : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    // read from socket
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      const auto id = DataFlowType::Type_FileSendRequest;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char sender[32];
+    char receiver[32];
+    char file_path[256];
+    int file_length;
+  } raw;
+};
 
+class FileSendAccept : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    // read from socket
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      const auto id = DataFlowType::Type_FileSendAccept;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char sender[32];
+    char receiver[32];
+    char file_path[256];
+    int file_length;
+    in_port_t udp_port;
+  } raw;
+};
 #endif // DOG_DATAFLOW_H_

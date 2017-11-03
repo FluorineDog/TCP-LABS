@@ -1,6 +1,8 @@
 #include "../include/common.h"
 #include "../include/dog_socket.h"
 #include "../protocol/dataflow.h"
+#include "../protocol/file_udp.h"
+
 #include <mutex>
 using std::cin;
 using std::cout;
@@ -63,19 +65,22 @@ void p2p_request(TCP conn) {
   data.listener_port = ::ntohs(global.self_server.getsockname().sin_port);
   std::lock_guard<std::mutex> lck(send_mutex);
   data.send_data(conn);
-
 }
-// void listener(TCP conn) {
-//   // while (true) {
-//     auto data = RawData::get_type(conn);
-//     if (data == nullptr) {
-//       cerr << "server is down" << endl;
-//       exit(-1);
-//     }
-//     data->read_data(conn);
-//     data->action(conn);
-//   // }
-// }
+void file_send() {
+  FileSendRequest::Raw data;
+  cin >> data.receiver;
+  auto iter = global.lookup.find(data.receiver);
+  if (iter == global.lookup.end()) {
+    cerr << "no p2p connection set up" << endl;
+  }
+  cin >> data.file_path;
+  LOG(data.file_path);
+  COPY(data.sender, global.account);
+  data.file_length = File_UDP::len(data.file_path);
+  LOG(data.file_length);
+  data.send_data(iter->second);
+}
+
 int main() {
   cout << "client" << endl;
   TCP client;
@@ -111,6 +116,8 @@ int main() {
       sendmsg(client);
     } else if (req == "p2p") {
       p2p_request(client);
+    } else if (req == "filesend") {
+      file_send();
     } else {
       cout << "ignored" << endl;
     }
