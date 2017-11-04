@@ -62,10 +62,11 @@ void p2p_request(TCP conn) {
   COPY(data.sender, global.account);
   cin >> data.receiver;
   // data.listener_ip
-  data.listener_port = ::ntohs(global.self_server.getsockname().sin_port);
+  data.listener_port = global.self_server.getsockname().get_port();
   std::lock_guard<std::mutex> lck(send_mutex);
   data.send_data(conn);
 }
+
 void file_send() {
   FileSendRequest::Raw data;
   cin >> data.receiver;
@@ -76,8 +77,21 @@ void file_send() {
   cin >> data.file_path;
   LOG(data.file_path);
   COPY(data.sender, global.account);
-  data.file_length = File_UDP::len(data.file_path);
+  data.file_length = FileUDP::len(data.file_path);
   LOG(data.file_length);
+  data.send_data(iter->second);
+}
+
+void file_accept() {
+  extern FileSendAccept::Raw data;
+  string local_file_path;
+  cin >> local_file_path;
+  LOG(local_file_path);
+  LOG(data.file_path);
+  LOG(data.file_length);
+  LOG(data.sender);
+  data.udp_port = FileUDP::open_receive_port(local_file_path, data.file_length);
+  auto iter = global.lookup.find(data.sender);
   data.send_data(iter->second);
 }
 
@@ -118,6 +132,8 @@ int main() {
       p2p_request(client);
     } else if (req == "filesend") {
       file_send();
+    } else if (req == "fileAC") {
+      file_accept();
     } else {
       cout << "ignored" << endl;
     }

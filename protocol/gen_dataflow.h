@@ -1,3 +1,5 @@
+// alternative for C++ 20 feature
+// no header protection by design
 #include "../protocol/dataflow.h"
 #define BOTHCASE(name) NEWCASE(name)
 
@@ -28,8 +30,6 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
   }
   return data;
 }
-
-
 
 #undef SERVERCASE
 #undef CLIENTCASE

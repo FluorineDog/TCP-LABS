@@ -180,7 +180,7 @@ public:
     char sender[32];
     char receiver[32];
     char file_path[256];
-    int file_length;
+    size_t file_length;
   } raw;
 };
 
@@ -199,9 +199,9 @@ public:
     }
     char sender[32];
     char receiver[32];
-    char file_path[256];
-    int file_length;
     in_port_t udp_port;
+    char file_path[256];
+    size_t file_length;
   } raw;
 };
 #endif // DOG_DATAFLOW_H_

@@ -39,6 +39,10 @@ template <int N> inline void COPY(char (&dest)[N], const string &src) {
   strncpy(dest, src.c_str(), N);
 }
 
+template <int N> inline void COPY(char (&dest)[N], const char *src) {
+  strncpy(dest, src, N);
+}
+
 #define ERROR_EXIT(status)                                                     \
   if (status == -1) {                                                          \
     cerr << "failed to " << __FUNCTION__ << endl;                              \
@@ -52,4 +56,9 @@ constexpr int BUFFER_SIZE = 1024;
 constexpr int LISTENQ = 1024;
 constexpr size_t TRANS_BLOCK_SIZE = 64 * 1024 * 1024;
 constexpr size_t TRANS_BLOCK_SIZE_EXP = 26;
+inline double dog_timer() {
+  timespec tmp;
+  clock_gettime(CLOCK_MONOTONIC, &tmp);
+  return tmp.tv_sec + tmp.tv_nsec / 1.0e9;
+}
 #endif // DOG_COMMON_H_

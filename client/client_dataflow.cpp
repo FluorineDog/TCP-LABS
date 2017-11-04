@@ -102,18 +102,30 @@ void P2PLogin::action(TCP conn) {
   global.lookup[raw.peer] = conn;
 }
 
+FileSendAccept::Raw data;
 void FileSendRequest::action(TCP conn) {
   // message box
   LOG(raw.file_path);
   LOG(raw.file_length);
   LOG(raw.sender);
+  cout << "FileRequest" << endl;
+  COPY(data.sender, raw.sender);
+  COPY(data.receiver, raw.receiver);
+  COPY(data.file_path, raw.file_path);
+  data.file_length = raw.file_length;
+  // set up File later
 }
 
+#include "../protocol/file_udp.h"
 void FileSendAccept::action(TCP conn) {
-  cerr << "wtf";
-  exit(-1);
   // message box
-  // LOG(raw.file_path);
-  // LOG(raw.file_length);
-  // LOG(raw.sender);
+  LOG(raw.file_path);
+  LOG(raw.file_length);
+  LOG(raw.sender);
+  LOG(raw.receiver);
+  FileUDP file_udp;
+  file_udp.prepare_send(raw.file_path);
+  auto ip = TCP(global.lookup[raw.receiver]).getpeername().get_ip();
+  LOG(ip);
+  file_udp.send(ip, raw.udp_port);
 }

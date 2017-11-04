@@ -4,6 +4,14 @@
 #include "common.h"
 #include <functional>
 #include <sys/epoll.h>
+class DogAddr {
+public:
+  DogAddr(const sockaddr_in &addr) : addr(addr) {}
+  unsigned get_ip() { return ntohl(addr.sin_addr.s_addr); }
+  unsigned get_port() { return ntohs(addr.sin_port); }
+private:
+  sockaddr_in addr;
+};
 
 class TCP {
 private:
@@ -22,7 +30,7 @@ public:
       exit(-1);
     }
   }
-  sockaddr_in getsockname() {
+  DogAddr getsockname() {
     // std::pair<sockaddr_in, in_port_t> ip_port;
     sockaddr_in addr;
     auto len = addrlen();
@@ -34,7 +42,7 @@ public:
     return addr;
   }
 
-  sockaddr_in getpeername() {
+  DogAddr getpeername() {
     // std::pair<sockaddr_in, in_port_t> ip_port;
     sockaddr_in addr;
     auto len = addrlen();
@@ -46,7 +54,7 @@ public:
     return addr;
   }
 
-  void connect(const auto server_ip, in_port_t port) {
+  void connect(auto server_ip, in_port_t port) {
     // connect to server
     auto addr = create_addr(server_ip, port);
     int status = ::connect(fd, SAP(addr), addrlen());
@@ -249,13 +257,5 @@ private:
   TCP server;
   int epollfd;
 };
-
-inline std::ostream &operator<<(std::ostream &out, const sockaddr_in &addr) {
-  // buggy
-  char ip_buf[36];
-  ::inet_ntop(AF_INET, &addr.sin_addr, ip_buf, sizeof(ip_buf));
-  return out << ip_buf << ":" << addr.sin_port;
-  return out;
-}
 
 #endif // DOG_SOCKET_H_

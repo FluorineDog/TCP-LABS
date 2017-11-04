@@ -126,9 +126,9 @@ void send_offline_message(TCP conn, const string &receiver) {
 void P2PRequest::action(TCP conn) {
   auto iter = lookup.find(raw.receiver);
   if (iter != lookup.end()) {
-    auto addr = conn.getpeername();
-    raw.listener_ip = ::ntohl(addr.sin_addr.s_addr);
-    LOG(addr);
+    auto peer_ip = conn.getpeername().get_ip();
+    raw.listener_ip = peer_ip;
+    LOG(peer_ip);
     LOG(raw.listener_port);
     raw.send_data(iter->second);
   } else {
