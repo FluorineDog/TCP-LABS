@@ -5,39 +5,53 @@
 #include "../include/dog_socket.h"
 #include <cstdio>
 
-// class UDP {
-// public:
-//   void socket() {
-//     int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-//     ERROR_EXIT(fd);
-//   }
-//   void bind(in_port_t port) {
-//     auto addr = create_addr(INADDR_ANY, port);
-//     int status = ::bind(0);
-//     ERROR_EXIT(status);
-//   }
-//   void connect(auto server_ip, in_port_t) {}
+class UDP {
+public:
+  void socket() {
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    ERROR_EXIT(fd);
+  }
+  void bind(in_port_t port) {
+    auto addr = create_addr(INADDR_ANY, port);
+    int status = ::bind(fd, SAP(addr), addrlen());
+    ERROR_EXIT(status);
+  }
+  void connect(auto server_ip, in_port_t port) {
+    auto addr = create_addr(INADDR_ANY, port);
+    ::connect(fd, SAP(addr), addrlen());
+  }
+  void send(void* buf_, size_t size){
+    ::send(fd, buf, size, )
+  }
+private:
+  static sockaddr_in create_addr(const char *server_ip, in_port_t port) {
+    sockaddr_in addr;
+    ::memset(&addr, 0, sizeof(addr));
+    ::inet_pton(AF_INET, server_ip, addr.sin_addr);
+    addr.sin_port = htons(port);
+    addr.sin_family = AF_INET;
+    return addr;
+  }
 
-// private:
-//   static sockaddr_in create_addr(const char *server_ip, in_port_t port) {
-//     sockaddr_in addr;
-//     ::memset(&addr, 0, sizeof(addr));
-//     ::inet_pton(server_ip, addr.sin_addr);
-//     addr.sin_port = htons(port);
-//     addr.sin_family = AF_INET;
-//     return addr;
-//   }
+  static sockaddr_in create_addr(in_addr_t server_ip, in_port_t port) {
+    sockaddr_in addr;
+    ::memset(&addr, 0, sizeof(addr));
+    addr.sin_addr.s_addr = ::htonl(server_ip);
+    addr.sin_port = htons(port);
+    addr.sin_family = AF_INET;
+    return addr;
+  }
 
-//   static sockaddr_in create_addr(in_addr_t server_ip, in_port_t port) {
-//     sockaddr_in addr;
-//     ::memset(&addr, 0, sizeof(addr));
-//     addr.sin_addr.s_addr = ::htonl(server_ip);
-//     addr.sin_port = htons(port);
-//     addr.sin_family = AF_INET;
-//     return addr;
-//   }
-//   int fd;
-// };
+  static const sockaddr *SAP(const sockaddr_in &addr) {
+    return (const sockaddr *)&addr;
+  }
+
+  static sockaddr *SAP(sockaddr_in &addr) { return (sockaddr *)&addr; }
+  static socklen_t addrlen() { return sizeof(sockaddr_in); }
+
+private:
+  int fd;
+};
 
 // class Real_FileUDP {
 // public:
@@ -124,6 +138,7 @@ public:
     }
     conn.close();
   }
+
 private:
   FILE *file;
   size_t length;
