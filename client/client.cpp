@@ -92,6 +92,9 @@ void file_accept() {
   LOG(data.sender);
   data.udp_port = FileUDP::open_receive_port(local_file_path, data.file_length);
   auto iter = global.lookup.find(data.sender);
+  if(iter == global.lookup.end()){
+    cerr << "p2p not set";
+  }
   data.send_data(iter->second);
 }
 

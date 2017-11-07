@@ -4,81 +4,61 @@
 #include "../include/common.h"
 #include "../include/dog_socket.h"
 #include <cstdio>
+#include <sys/stat.h>
+#include <bitset>
 
-class UDP {
+class UDP : public Communication
+{
 public:
-  void socket() {
-    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+  UDP() = default;
+  UDP(int fd) : Communication(fd) {}
+  void socket()
+  {
+    this->fd = ::socket(AF_INET, SOCK_DGRAM, 0);
     ERROR_EXIT(fd);
   }
-  void bind(in_port_t port) {
+
+  void bind(in_port_t port)
+  {
     auto addr = create_addr(INADDR_ANY, port);
     int status = ::bind(fd, SAP(addr), addrlen());
     ERROR_EXIT(status);
   }
-  void connect(auto server_ip, in_port_t port) {
+
+  void connect(in_addr_t server_ip, in_port_t port)
+  {
     auto addr = create_addr(INADDR_ANY, port);
     ::connect(fd, SAP(addr), addrlen());
   }
-  void send(void* buf_, size_t size){
-    ::send(fd, buf, size, )
-  }
-private:
-  static sockaddr_in create_addr(const char *server_ip, in_port_t port) {
-    sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
-    ::inet_pton(AF_INET, server_ip, addr.sin_addr);
-    addr.sin_port = htons(port);
-    addr.sin_family = AF_INET;
-    return addr;
-  }
-
-  static sockaddr_in create_addr(in_addr_t server_ip, in_port_t port) {
-    sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
-    addr.sin_addr.s_addr = ::htonl(server_ip);
-    addr.sin_port = htons(port);
-    addr.sin_family = AF_INET;
-    return addr;
-  }
-
-  static const sockaddr *SAP(const sockaddr_in &addr) {
-    return (const sockaddr *)&addr;
-  }
-
-  static sockaddr *SAP(sockaddr_in &addr) { return (sockaddr *)&addr; }
-  static socklen_t addrlen() { return sizeof(sockaddr_in); }
-
-private:
-  int fd;
+  void close() { ::close(fd); }
+  void send(void *buf, size_t size) { ::send(fd, buf, size, 0); }
 };
 
-// class Real_FileUDP {
-// public:
-//   static in_port_t open_receive_port(const string &local_file_path,
-//                                      size_t length);
-//   static size_t len(const string &file_path) {
-//     struct stat64 file_status;
-//     int status = stat64(file_path.c_str(), &file_status);
-//     ERROR_EXIT(status);
-//     return file_status.st_size;
-//   }
-//   size_t size() { return length; }
-//   void prepare_send(string file_path);
-//   void send(auto server_ip, in_port_t port);
-
-// private:
-//   size_t length;
-//   string file_length;
-// };
-
-#include <sys/stat.h>
-class Fake_FileUDP {
+class Real_FileUDP
+{
 public:
   static in_port_t open_receive_port(const string &local_file_path,
-                                     size_t length) {
+                                     size_t length);
+  static size_t len(const string &file_path)
+  {
+    struct stat64 file_status;
+    int status = stat64(file_path.c_str(), &file_status);
+    ERROR_EXIT(status);
+    return file_status.st_size;
+  }
+  static void send(const string &file_path, in_addr_t server_ip,
+                   in_port_t port);
+};
+
+class Fake_FileUDP
+{
+public:
+  static in_port_t open_receive_port(const string &local_file_path,
+                                     size_t length)
+  {
     FILE *file = fopen(local_file_path.c_str(), "wb");
-    if (file == nullptr) {
+    if (file == nullptr)
+    {
       cerr << "failed to open file in " << __FUNCTION__ << endl;
     }
     TCP server;
@@ -91,7 +71,8 @@ public:
           TCP conn = server.accept();
           double t_beg = dog_timer();
           server.close();
-          for (size_t offset = 0; offset < length;) {
+          for (size_t offset = 0; offset < length;)
+          {
             size_t sz = conn.read(buf.get(),
                                   std::min(TRANS_BLOCK_SIZE, length - offset));
             offset += sz;
@@ -109,27 +90,25 @@ public:
     return server.getsockname().get_port();
   }
 
-  static size_t len(const string &file_path) {
+  static size_t len(const string &file_path)
+  {
     struct stat64 file_status;
     int status = stat64(file_path.c_str(), &file_status);
     ERROR_EXIT(status);
     return file_status.st_size;
   }
 
-  void prepare_send(string file_path) {
-    file = fopen(file_path.c_str(), "rb");
-    length = len(file_path);
-    static_assert(sizeof(size_t) == 8, "fuck size_t");
-    return;
-  }
-  size_t size() { return length; }
-  void send(auto server_ip, in_port_t port) {
-    //
+  static void send(const string &file_path, in_addr_t server_ip,
+                   in_port_t port)
+  {
+    FILE *file = fopen(file_path.c_str(), "rb");
+    size_t length = len(file_path);
     TCP conn;
     conn.socket();
     conn.connect(server_ip, port);
     std::unique_ptr<char[]> buf(new char[TRANS_BLOCK_SIZE]);
-    for (size_t offset = 0; offset < length;) {
+    for (size_t offset = 0; offset < length;)
+    {
       size_t sz = fread(buf.get(), 1, TRANS_BLOCK_SIZE, file);
       conn.writen(buf.get(), sz);
       offset += sz;
@@ -140,9 +119,9 @@ public:
   }
 
 private:
-  FILE *file;
-  size_t length;
+  // FILE *file;
+  // size_t length;
 };
-using FileUDP = Fake_FileUDP;
 
+using FileUDP = Real_FileUDP;
 #endif

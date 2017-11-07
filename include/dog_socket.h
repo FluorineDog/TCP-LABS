@@ -9,27 +9,15 @@ public:
   DogAddr(const sockaddr_in &addr) : addr(addr) {}
   unsigned get_ip() { return ntohl(addr.sin_addr.s_addr); }
   unsigned get_port() { return ntohs(addr.sin_port); }
+
 private:
   sockaddr_in addr;
 };
 
-class TCP {
-private:
+class Communication {
 public:
-  // TCP(TCP&&) = default;
-  // TCP(const TCP&) = delete;
-  // TCP& operator=(TCP&&) = default;
-  // TCP& operator=(const TCP&) = delete;
-  // fake;
-  TCP() = default;
-  TCP(int fd) : fd(fd) {}
-  void socket() {
-    fd = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == -1) {
-      cerr << "failed to create sockets" << endl;
-      exit(-1);
-    }
-  }
+  Communication() = default;
+  Communication(int fd) : fd(fd) {}
   DogAddr getsockname() {
     // std::pair<sockaddr_in, in_port_t> ip_port;
     sockaddr_in addr;
@@ -54,7 +42,62 @@ public:
     return addr;
   }
 
-  void connect(auto server_ip, in_port_t port) {
+protected:
+  // static sockaddr_in create_addr(const char *server_ip, in_port_t port) {
+  //   sockaddr_in addr;
+  //   ::memset(&addr, 0, sizeof(addr));
+  //   inet_pton(server_ip, addr.sin_addr);
+  //   addr.sin_port = htons(port);
+  //   addr.sin_family = AF_INET;
+  //   return addr;
+  // }
+
+  static sockaddr_in create_addr(in_addr_t server_ip, in_port_t port) {
+    sockaddr_in addr;
+    ::memset(&addr, 0, sizeof(addr));
+    addr.sin_addr.s_addr = htonl(server_ip);
+    addr.sin_port = htons(port);
+    addr.sin_family = AF_INET;
+    return addr;
+  }
+
+  static void inet_pton(const char *server_ip, in_addr &ip) {
+    int status = ::inet_pton(AF_INET, server_ip, &ip);
+    if (status != 1) {
+      cerr << "failed to " << __FUNCTION__ << endl;
+      exit(-1);
+    }
+  }
+  static const sockaddr *SAP(const sockaddr_in &addr) {
+    return (const sockaddr *)&addr;
+  }
+
+  static sockaddr *SAP(sockaddr_in &addr) { return (sockaddr *)&addr; }
+  static socklen_t addrlen() { return sizeof(sockaddr_in); }
+
+protected:
+  int fd;
+};
+
+class TCP : public Communication {
+public:
+  // TCP(TCP&&) = default;
+  // TCP(const TCP&) = delete;
+  // TCP& operator=(TCP&&) = default;
+  // TCP& operator=(const TCP&) = delete;
+  // fake;
+  TCP() = default;
+  TCP(int fd) : Communication(fd) {}
+  operator int() { return fd; }
+  void socket() {
+    fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == -1) {
+      cerr << "failed to create sockets" << endl;
+      exit(-1);
+    }
+  }
+
+  void connect(in_addr_t server_ip, in_port_t port) {
     // connect to server
     auto addr = create_addr(server_ip, port);
     int status = ::connect(fd, SAP(addr), addrlen());
@@ -73,6 +116,7 @@ public:
       exit(-1);
     }
   }
+
   void listen() {
     // change to passive mode
     int status = ::listen(fd, LISTENQ);
@@ -160,51 +204,7 @@ public:
   }
 
   // int get_raw_fd() { return fd; }
-  operator int() { return fd; }
-
-  sockaddr_in get_addr() const {
-    sockaddr_in addr;
-    socklen_t len = addrlen();
-    ::getpeername(fd, SAP(addr), &len);
-    return addr;
-  }
   friend std::ostream &operator<<(std::ostream &out, const sockaddr_in &addr);
-
-private:
-  static sockaddr_in create_addr(const char *server_ip, in_port_t port) {
-    sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
-    inet_pton(server_ip, addr.sin_addr);
-    addr.sin_port = htons(port);
-    addr.sin_family = AF_INET;
-    return addr;
-  }
-
-  static sockaddr_in create_addr(in_addr_t server_ip, in_port_t port) {
-    sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
-    addr.sin_addr.s_addr = ::htonl(server_ip);
-    addr.sin_port = htons(port);
-    addr.sin_family = AF_INET;
-    return addr;
-  }
-
-  static void inet_pton(const char *server_ip, in_addr &ip) {
-    int status = ::inet_pton(AF_INET, server_ip, &ip);
-    if (status != 1) {
-      cerr << "failed to " << __FUNCTION__ << endl;
-      exit(-1);
-    }
-  }
-  static const sockaddr *SAP(const sockaddr_in &addr) {
-    return (const sockaddr *)&addr;
-  }
-
-  static sockaddr *SAP(sockaddr_in &addr) { return (sockaddr *)&addr; }
-  static socklen_t addrlen() { return sizeof(sockaddr_in); }
-
-private:
-  int fd;
 };
 
 class Epoll {
@@ -238,6 +238,7 @@ public:
       }
     }
   }
+
   void visitor(TCP conn);
   int erase(int fd) {
     epoll_event event;

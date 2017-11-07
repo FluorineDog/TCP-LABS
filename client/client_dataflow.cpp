@@ -124,8 +124,7 @@ void FileSendAccept::action(TCP conn) {
   LOG(raw.sender);
   LOG(raw.receiver);
   FileUDP file_udp;
-  file_udp.prepare_send(raw.file_path);
   auto ip = TCP(global.lookup[raw.receiver]).getpeername().get_ip();
   LOG(ip);
-  file_udp.send(ip, raw.udp_port);
+  file_udp.send(raw.file_path, ip, raw.udp_port);
 }

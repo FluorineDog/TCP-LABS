@@ -39,7 +39,6 @@ void Epoll::visitor(TCP conn) {
 }
 
 int main() {
-  int fake;
   cout << "server" << endl;
   TCP server;
   server.socket();

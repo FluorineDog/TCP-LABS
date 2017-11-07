@@ -15,9 +15,6 @@
 
 extern sqlite::connection sql;
 
-// #define SQL_EXECUTE(cmd, instruction)                                           \
-  // static sqlite::execute cmd(sql, instruction);
-
 // in server
 void Registion::action(TCP conn) {
   // in server

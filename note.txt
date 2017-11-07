@@ -1,0 +1,25 @@
+try using nak
+for a nak 
+use nak as a feture
+1600
+using queue as base
+for last_result to this-windows
+resend any packet that is lost
+keep going 
+
+sender
+    on got acked
+    send current=window + whatever
+    for acked packet
+    resend lost
+    assuming fixed window 
+
+receiver
+    on got packet
+    analyse lost packet
+    resend NAKed packet
+    if NAK is lost  
+    // feeling sad
+    resend all
+    keep going
+

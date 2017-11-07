@@ -50,7 +50,8 @@ template <int N> inline void COPY(char (&dest)[N], const char *src) {
   }
 
 #define LOG(expr) std::cerr << "*** " #expr << " <*> " << (expr) << endl
-#define SERVER_IP "127.0.0.1"
+
+constexpr in_addr_t SERVER_IP = 0x7f'00'00'01; // 127.0.0.1
 constexpr in_port_t SERVER_PORT = 30000;
 constexpr int BUFFER_SIZE = 1024;
 constexpr int LISTENQ = 1024;
