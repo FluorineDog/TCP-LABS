@@ -8,12 +8,14 @@ inline unsigned int naive_hash(const void *data, int size) {
   // work only for Plain Old Data (POD)
   // stupid but efficient for random data
   // unsafe for attack, but security is NOT required
-  static_assert(sizeof(unsigned long long) == 8, "fake compiler");
-  assert((size_t)data % 8 == 0);
-  assert(size % 8 == 0);
-  size /= 8;
-  unsigned long long crc = 0;
-  unsigned long long *data_ = (unsigned long long *)data;
+  // using T = unsigned long long;
+  using T = char;
+  static_assert(sizeof(T) == 1, "fake compiler");
+  assert((size_t)data % 1 == 0);
+  assert(size % sizeof(T) == 0);
+  size /= sizeof(T);
+  T crc = 0;
+  T *data_ = (T *)data;
   for (int i = 0; i < size; ++i) {
     crc = _mm_crc32_u64(crc, data_[i]);
   }

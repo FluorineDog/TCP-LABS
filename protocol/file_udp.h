@@ -38,12 +38,23 @@ public:
 
   void close() { ::close(fd); }
   void send(void *buf, size_t size) { ::send(fd, buf, size, 0); }
-  void recv(void *buf, size_t size) { ::recv(fd, buf, size, MSG_DONTWAIT); }
-  DogAddr recvfrom(void *buf, size_t size) {
-    DogAddr addr;
+  bool recv(void *buf, size_t size) {
+    int status = ::recv(fd, buf, size, 0);
+    if (status < 0) {
+      assert(errno == EAGAIN);
+      return false;
+    }
+    return true;
+  }
+  bool recvfrom(void *buf, size_t size, DogAddr &addr) {
+    // DogAddr addr;
     auto len = addrlen();
-    ::recvfrom(fd, buf, size, 0, SAP(addr.raw()), &len);
-    return addr;
+    int status = ::recvfrom(fd, buf, size, 0, SAP(addr.raw()), &len);
+    if (status < 0) {
+      assert(errno == EAGAIN);
+      return false;
+    }
+    return true;
   }
 };
 

@@ -37,11 +37,11 @@ using std::map;
 
 // #define COPY(dest, src) strncpy(dest, src, 32)
 template <int N> inline void COPY(char (&dest)[N], const string &src) {
-  strncpy(dest, src.c_str(), N);
+  memcpy(dest, src.c_str(), N);
 }
 
 template <int N> inline void COPY(char (&dest)[N], const char *src) {
-  strncpy(dest, src, N);
+  memcpy(dest, src, N);
 }
 
 #define ERROR_EXIT(status)                                                     \
