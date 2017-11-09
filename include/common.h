@@ -34,6 +34,7 @@ using std::tuple;
 using boost::shared_ptr;
 using std::map;
 
+
 // #define COPY(dest, src) strncpy(dest, src, 32)
 template <int N> inline void COPY(char (&dest)[N], const string &src) {
   strncpy(dest, src.c_str(), N);
@@ -53,7 +54,7 @@ template <int N> inline void COPY(char (&dest)[N], const char *src) {
 
 constexpr in_addr_t SERVER_IP = 0x7f'00'00'01; // 127.0.0.1
 constexpr in_port_t SERVER_PORT = 30000;
-constexpr int BUFFER_SIZE = 1024;
+// constexpr int BUFFER_SIZE = 1024;
 constexpr int LISTENQ = 1024;
 constexpr size_t TRANS_BLOCK_SIZE = 64 * 1024 * 1024;
 constexpr size_t TRANS_BLOCK_SIZE_EXP = 26;

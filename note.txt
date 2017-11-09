@@ -23,3 +23,9 @@ receiver
     resend all
     keep going
 
+sendRQ file and length 
+    refuse: nothing happened
+    receive: recv_port file length 
+    start receiving; for the first pack, connect; sending ack to it forever;
+send: tcp_block_send_port
+     

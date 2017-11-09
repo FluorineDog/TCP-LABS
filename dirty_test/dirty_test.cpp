@@ -14,30 +14,50 @@ using namespace std;
 
 TEST(libcrypto, base) {}
 
-TEST(sqlite, base) {
-  sqlite3 *db;
-  char *errmsg;
-  const char *tail;
-  sqlite3_open("test.db", &db);
-  sqlite3_exec(db, "select * from account_info",
-               [](void *, int n, char **strs, char **names) {
-                 cerr << n;
-                 for (int i = 0; i < n; ++i) {
-                   cerr << "|" << strs[i];
-                 }
-                 cerr << endl;
-                 return 0;
-               },
-               nullptr, &errmsg);
-  
-  // EXPECT_EQ(4, strlen(errmsg));
-  EXPECT_EQ(nullptr, errmsg);
-  sqlite3_stmt *stmt;
-  sqlite3_prepare_v2(db, "select * from account_info", -1, &stmt, &tail);
-  // sqlite3_bind_ 
-  sqlite3_step(stmt);
-  // cerr << "$" << tail << "$";
-  EXPECT_EQ(0, tail[0]);
-  sqlite3_finalize(stmt);
-  // cerr << errmsg;
+// TEST(sqlite, base) {
+//   sqlite3 *db;
+//   char *errmsg;
+//   const char *tail;
+//   sqlite3_open("test.db", &db);
+//   sqlite3_exec(db, "select * from account_info",
+//                [](void *, int n, char **strs, char **names) {
+//                  cerr << n;
+//                  for (int i = 0; i < n; ++i) {
+//                    cerr << "|" << strs[i];
+//                  }
+//                  cerr << endl;
+//                  return 0;
+//                },
+//                nullptr, &errmsg);
+
+//   // EXPECT_EQ(4, strlen(errmsg));
+//   EXPECT_EQ(nullptr, errmsg);
+//   sqlite3_stmt *stmt;
+//   sqlite3_prepare_v2(db, "select * from account_info", -1, &stmt, &tail);
+//   // sqlite3_bind_
+//   sqlite3_step(stmt);
+//   // cerr << "$" << tail << "$";
+//   EXPECT_EQ(0, tail[0]);
+//   sqlite3_finalize(stmt);
+//   // cerr << errmsg;
+// }
+#include <cstddef>
+#include <nmmintrin.h>
+
+TEST(crc, test1) {
+  union {
+    unsigned long long ull;
+    unsigned ui[2];
+  };
+  ull = 0x0123'4567'89ab'cdef;
+  unsigned long long crc1 = 0;
+  unsigned crc2 = 0;
+  crc1 = _mm_crc32_u64(crc1, ull);
+  crc2 = _mm_crc32_u32(crc2, ui[0]);
+  crc2 = _mm_crc32_u32(crc2, ui[1]);
+  EXPECT_EQ(crc1, crc2);
+  // unsigned int crc = 1;
+  // unsigned int input = 50000;
+  // unsigned int res = _mm_crc32_u32(crc, input);
+  // EXPECT_EQ(971731851, res);
 }

@@ -6,9 +6,11 @@
 #include <sys/epoll.h>
 class DogAddr {
 public:
+  DogAddr() = default;
   DogAddr(const sockaddr_in &addr) : addr(addr) {}
   unsigned get_ip() { return ntohl(addr.sin_addr.s_addr); }
   unsigned get_port() { return ntohs(addr.sin_port); }
+  sockaddr_in &raw() { return addr; }
 
 private:
   sockaddr_in addr;
