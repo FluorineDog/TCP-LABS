@@ -49,10 +49,11 @@ constexpr size_t MTU = 1500;
 constexpr size_t UDP_MAX_SIZE = (MTU - 8) - 20;
 constexpr size_t ACK_SIZE = 32;
 constexpr size_t UDP_DATA_SINGLE = UDP_MAX_SIZE - sizeof(unsigned) * 2;
-constexpr size_t UDP_BUFFER_SIZE_TMP = (16 * 1024);
+constexpr size_t UDP_BUFFER_SIZE_TMP = (4 * 1024 * 1024);
 constexpr size_t UDP_BUFFER_SEGMENTS = UDP_BUFFER_SIZE_TMP / UDP_DATA_SINGLE;
 constexpr size_t UDP_BUFFER_SIZE = UDP_BUFFER_SEGMENTS * UDP_DATA_SINGLE;
 constexpr size_t UDP_SLOT_COUNT = 2;
+constexpr size_t UDP_FIXED_WIND = 10;
 
 struct Datagram {
   unsigned int seq; //
