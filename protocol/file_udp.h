@@ -9,6 +9,20 @@
 #include <sys/stat.h>
 #include <vector>
 
+
+
+#include <random>
+class Jam {
+public:
+  Jam(double p) : p(p), eng(2333), distr(0, 1) {}
+  bool lost() { return distr(eng) < p; }
+
+private:
+  const double p;
+  std::default_random_engine eng;
+  std::uniform_real_distribution<double> distr;
+};
+
 class UDP : public Communication {
 public:
   UDP() = default;
@@ -37,11 +51,20 @@ public:
   }
 
   void close() { ::close(fd); }
-  void send(void *buf, size_t size) { ::send(fd, buf, size, 0); }
+  void send(void *buf, size_t size) {
+    extern Jam jam;
+    if (jam.lost()) {
+      return;
+    }
+    ::send(fd, buf, size, 0);
+  }
   bool recv(void *buf, size_t size) {
     int status = ::recv(fd, buf, size, 0);
     if (status < 0) {
-      assert(errno == EAGAIN);
+      if (errno != EAGAIN) {
+        LOG(strerror(errno));
+        assert(errno == EAGAIN);
+      }
       return false;
     }
     return true;
