@@ -76,12 +76,8 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
   std::vector<char> buffer(UDP_BUFFER_SIZE * UDP_SLOT_COUNT);
   std::vector<size_t> recv_count(UDP_SLOT_COUNT);
   std::bitset<UDP_BUFFER_SIZE> ack_record[UDP_SLOT_COUNT];
-  // std::mutex mu;
-  // LOG(server.getsockname().get_ip());
-  // LOG(server.getsockname().get_port());
   cerr << "pertend receiving";
   DogAddr addr;
-  // server.set_timeout(10'000);
   for (size_t seq_base = 0; seq_base < length; seq_base += UDP_BUFFER_SIZE) {
     size_t seq_end = std::min(length, seq_base + UDP_BUFFER_SIZE);
     for (size_t seq = seq_base; seq < seq_end;) {
@@ -89,7 +85,6 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
       Datagram send_data;
       int status;
       if (isFirstRecv) {
-        // cerr << "handshake";
         status = server.recvfrom(&send_data, sizeof(send_data), addr);
       } else {
         status = server.recv(&send_data, sizeof(send_data));
@@ -103,32 +98,20 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
         cerr << "dup!!";
         LOG(seq_index);
         LOG(send_data.seq_index);
-        // continue;
       } else {
         ::memcpy(buffer.data() + seq - seq_base, send_data.data,
                  UDP_DATA_SINGLE);
         seq += UDP_DATA_SINGLE;
       }
-
-      // auto crc = naive_hash(send_data.data, UDP_DATA_SINGLE);
-      // feedback
       DatagramACK ack_data;
       ack_data.seq_index[0] = send_data.seq_index;
       if (isFirstRecv) {
         server.connect(addr.get_ip(), addr.get_port());
-        // LOG(server.getpeername().get_ip());
-        // LOG(server.getpeername().get_port());
-        // cerr << "fake connection" << endl;
         isFirstRecv = false;
       }
       server.send(&ack_data, sizeof(ack_data));
-      // cerr << "receiving with ";
-      // LOG(seq);
-      // LOG(crc);
     }
-    // cerr << "fake writing" << endl;
     auto nwrite = ::fwrite(buffer.data(), 1, seq_end - seq_base, local_file);
-    // assert(nwrite + seq_base == seq_end);
     auto total_crc = naive_hash(buffer.data(), seq_end - seq_base);
     LOG(total_crc);
   }
@@ -149,21 +132,13 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
 
 static void sender(UDP conn, FILE *sending_file, size_t length) {
   std::vector<char> buffer(UDP_BUFFER_SIZE * UDP_SLOT_COUNT);
-  std::vector<size_t> recv_count(UDP_SLOT_COUNT);
-  std::bitset<UDP_BUFFER_SIZE> ack_record[UDP_SLOT_COUNT];
+	std::vector<size_t> recv_count(UDP_SLOT_COUNT);
   size_t last_index = 0;
-  // LOG(conn.getsockname().get_ip());
-  // LOG(conn.getsockname().get_port());
-  // LOG(conn.getpeername().get_ip());
-  // LOG(conn.getpeername().get_port());
-  // cerr << "fake sender";
   conn.set_timeout(100'000);
   auto tbeg = dog_timer();
   for (size_t seq_base = 0; seq_base < length; seq_base += UDP_BUFFER_SIZE) {
     size_t seq_end = std::min(length, seq_base + UDP_BUFFER_SIZE);
-    // cerr << "fake reading" << endl;
     auto nread = ::fread(buffer.data(), 1, UDP_BUFFER_SIZE, sending_file);
-    // assert(nread + seq_base == seq_end);
     auto total_crc = naive_hash(buffer.data(), seq_end - seq_base);
     LOG(total_crc);
     for (size_t seq = seq_base; seq < seq_end;) {
@@ -171,7 +146,6 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
       Datagram send_data;
       send_data.seq_index = (unsigned)(seq_index);
       COPY(send_data.data, buffer.data() + seq - seq_base);
-      // auto crc = naive_hash(send_data.data, UDP_DATA_SINGLE);
       conn.send(&send_data, sizeof(send_data));
       DatagramACK ack_data;
       auto status = conn.recv(&ack_data, sizeof(ack_data));
@@ -189,9 +163,6 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         LOG(ack_data.seq_index[0]);
         LOG(seq_index);
       }
-      // cerr << "sending with ";
-      // LOG(seq);
-      // LOG(crc);
     }
   }
   cerr << "pertend sending";
