@@ -204,7 +204,7 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
         // LOG(write_edge);
         // LOG(reply.bottom_ack());
         // LOG(write_length);
-        auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS);
+        auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
         LOG(total_crc);
         write_edge = std::min(max_seq_index, write_edge + SLOTS);
         buffer.push(SLOTS);
@@ -247,12 +247,12 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
 
   ::fread(buffer.raw_ptr(), 1, 2 * SLOTS * SINGLE_LENGTH, sending_file);
   {
-    auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS);
+    auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
     LOG(total_crc);
   }
   {
-    auto total_crc =
-        naive_hash(buffer.raw_ptr() + SLOTS * SINGLE_LENGTH, SLOTS);
+    auto total_crc = naive_hash(buffer.raw_ptr() + SLOTS * SINGLE_LENGTH,
+                                SLOTS * SINGLE_LENGTH);
     LOG(total_crc);
   }
 
@@ -317,12 +317,12 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // check if lock can be release
         if (reply.bottom_ack() >= write_edge) {
           ::fread(buffer.raw_ptr(), 1, SLOTS, sending_file);
-          auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS);
+          auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
           LOG(total_crc);
           buffer.push(SLOTS);
           write_edge += SLOTS;
         }
-        if(reply.bottom_ack() >= max_seq_index){
+        if (reply.bottom_ack() >= max_seq_index) {
           return;
         }
       }
