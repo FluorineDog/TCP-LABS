@@ -3,8 +3,8 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
-#undef LOG
-#define LOG(x)  
+// #undef LOG
+// #define LOG(x)
 
 static void receiver(UDP server, FILE *local_file, size_t length);
 in_port_t Real_FileUDP::open_receive_port(const string &local_file_path,
@@ -54,8 +54,8 @@ constexpr size_t ACK_SIZE = 32;
 constexpr size_t SINGLE_LENGTH = UDP_MAX_SIZE - sizeof(unsigned) * 2;
 constexpr size_t SLOTS = 2 * 1024;
 constexpr size_t INIT_WND = 2;
+constexpr size_t SOFT_WIND = 20;
 constexpr size_t HARD_WIND = 20;
-constexpr size_t SOFT_WIND = 60;
 constexpr size_t NAK_SIZE = 4;
 constexpr unsigned int INACTIVE = (unsigned)-1;
 
@@ -137,7 +137,7 @@ struct DatagramACK {
 };
 using std::vector;
 
-Jam jam(0.001);
+Jam jam(0.10);
 template <size_t max_interval, class T> class Window {
   static_assert(((max_interval - 1) & max_interval) == 0, "fake");
 
@@ -211,8 +211,8 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
         // LOG(write_edge);
         // LOG(reply.bottom_ack());
         // LOG(write_length);
-        auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
-        LOG(total_crc);
+        // auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
+        // LOG(total_crc);
         write_edge = std::min(max_seq_index, write_edge + SLOTS);
         buffer.push(SLOTS);
         if (buffer.empty()) {
@@ -221,14 +221,14 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
       }
     } else {
       // cerr << "dup!";
-      LOG(reply.main_ack);
-      LOG(send_data.seq_index);
+      // LOG(reply.main_ack);
+      // LOG(send_data.seq_index);
     }
     server.send(&reply, sizeof(reply));
   }
 
 endOfRecv:
-  cerr << "final_time" <<  dog_timer() - t1 << endl;
+  cerr << "final_time" << dog_timer() - t1 << endl;
   server.send(&reply, sizeof(reply));
   server.set_timeout(500'000);
   while (true) {
@@ -252,7 +252,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
   Window<SLOTS * 2, char[SINGLE_LENGTH]> buffer(max_seq_index);
   std::queue<LostPack> lost_queue;
   size_t send_seq_index = 0;
-  conn.set_timeout(500'000);
+  conn.set_timeout(200'000);
 
   int n = ::fread(buffer.raw_ptr(), 1, 2 * SLOTS * SINGLE_LENGTH, sending_file);
   assert(n == 2 * SLOTS * SINGLE_LENGTH);
@@ -278,31 +278,46 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // time to check lost
         if (!isTimeout && main_ack < lost_queue.front().trigger_ack)
           break;
+
+        if (isTimeout) {
+          LOG(lost_queue.size());
+        }
+
         auto resent_seq_index = lost_queue.front().seq_index;
         lost_queue.pop();
+
+        if (isTimeout) {
+          LOG(lost_queue.size());
+          LOG(resent_seq_index);
+          LOG(total_reply.isAcked(resent_seq_index));
+        }
+
         if (total_reply.isAcked(resent_seq_index)) {
           continue;
         }
+
         Datagram send_data;
         // cerr << "queue resent " << resent_seq_index << endl;
+        LOG(resent_seq_index);
         send_data.seq_index = (unsigned)(resent_seq_index);
         COPY(send_data.data, buffer[resent_seq_index]);
         conn.send(&send_data, sizeof(send_data));
         lost_queue.push({resent_seq_index, main_ack + 4});
       }
-      if (isTimeout) {
-        for (size_t index = total_reply.main_ack; index < send_seq_index;
-             ++index) {
-          // std::cerr << "resent " << index << endl;
-          Datagram send_data;
-          send_data.seq_index = (unsigned)(index);
-          COPY(send_data.data, buffer[index]);
-          conn.send(&send_data, sizeof(send_data));
-          lost_queue.push({index, index + 4});
-        }
-      }
-      isTimeout = false;
     }
+
+    if (isTimeout) {
+      for (size_t index = total_reply.main_ack; index < send_seq_index;
+           ++index) {
+        // std::cerr << "resent " << index << endl;
+        Datagram send_data;
+        send_data.seq_index = (unsigned)(index);
+        COPY(send_data.data, buffer[index]);
+        conn.send(&send_data, sizeof(send_data));
+        lost_queue.push({index, index + 4});
+      }
+    }
+    isTimeout = false;
 
     // to avoid congestion
     if (send_seq_index >= max_seq_index ||
@@ -327,8 +342,11 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // assume no reordered ack
         // total_reply = reply;
         {
-          if (main_ack < reply.main_ack - 1) {
+          if (main_ack <= reply.main_ack - 2) {
+            LOG("---");
+            LOG(main_ack);
             for (auto nak : reply.naks) {
+              LOG(nak);
               if (nak == INACTIVE) {
                 break;
               }
