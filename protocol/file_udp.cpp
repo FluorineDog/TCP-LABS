@@ -3,6 +3,8 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#undef LOG
+#define LOG(x)  
 
 static void receiver(UDP server, FILE *local_file, size_t length);
 in_port_t Real_FileUDP::open_receive_port(const string &local_file_path,
@@ -104,11 +106,15 @@ struct DatagramACK {
       return true;
     } else if (main_ack < seq_index) {
       // new ack
+      // size_t lost = main_ack;
       for (auto &nak : naks) {
         if (nak == INACTIVE) {
-          nak = seq_index;
-          main_ack = seq_index + 1;
-          return true;
+          nak = main_ack;
+          ++main_ack;
+          if (main_ack == seq_index) {
+            ++main_ack;
+            return true;
+          }
         } else if (nak == seq_index) {
           return false;
         }
@@ -131,7 +137,7 @@ struct DatagramACK {
 };
 using std::vector;
 
-Jam jam(0.000);
+Jam jam(0.001);
 template <size_t max_interval, class T> class Window {
   static_assert(((max_interval - 1) & max_interval) == 0, "fake");
 
@@ -175,6 +181,7 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
   DogAddr addr;
   size_t ack_edge = 0;
   // based on packet
+  auto t1 = dog_timer();
   int status;
   size_t write_edge = SLOTS;
   server.set_timeout(1000'000);
@@ -213,13 +220,15 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
         }
       }
     } else {
-      cerr << "dup!";
+      // cerr << "dup!";
       LOG(reply.main_ack);
       LOG(send_data.seq_index);
     }
     server.send(&reply, sizeof(reply));
   }
+
 endOfRecv:
+  cerr << "final_time" <<  dog_timer() - t1 << endl;
   server.send(&reply, sizeof(reply));
   server.set_timeout(500'000);
   while (true) {
@@ -275,6 +284,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
           continue;
         }
         Datagram send_data;
+        // cerr << "queue resent " << resent_seq_index << endl;
         send_data.seq_index = (unsigned)(resent_seq_index);
         COPY(send_data.data, buffer[resent_seq_index]);
         conn.send(&send_data, sizeof(send_data));
@@ -283,7 +293,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
       if (isTimeout) {
         for (size_t index = total_reply.main_ack; index < send_seq_index;
              ++index) {
-          //
+          // std::cerr << "resent " << index << endl;
           Datagram send_data;
           send_data.seq_index = (unsigned)(index);
           COPY(send_data.data, buffer[index]);
@@ -304,9 +314,10 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
       if (!status) {
         // timeout
         // emmmmm what the hell...
-        cerr << "timeout";
+        cerr << "timeout!!";
         LOG(main_ack);
         LOG(send_seq_index);
+        LOG(total_reply.bottom_ack());
         isTimeout = true;
         // goto first section
         // block wind growth
@@ -314,12 +325,30 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
       } else {
         // update reply
         // assume no reordered ack
-        total_reply = reply;
+        // total_reply = reply;
+        {
+          if (main_ack < reply.main_ack - 1) {
+            for (auto nak : reply.naks) {
+              if (nak == INACTIVE) {
+                break;
+              }
+              if (nak >= main_ack) {
+                Datagram send_data;
+                send_data.seq_index = (unsigned)(nak);
+                COPY(send_data.data, buffer[nak]);
+                conn.send(&send_data, sizeof(send_data));
+                lost_queue.push({nak, main_ack + 4});
+              }
+            }
+          }
+          total_reply = reply;
+        }
         // check if lock can be release
         if (reply.bottom_ack() >= write_edge) {
-          int nread = ::fread(buffer.raw_ptr(), 1, SLOTS * SINGLE_LENGTH, sending_file);
+          int nread =
+              ::fread(buffer.raw_ptr(), 1, SLOTS * SINGLE_LENGTH, sending_file);
           auto total_crc = naive_hash(buffer.raw_ptr(), nread);
-          cerr << nread;
+          // cerr << nread;
           LOG(total_crc);
           buffer.push(SLOTS);
           write_edge += SLOTS;
