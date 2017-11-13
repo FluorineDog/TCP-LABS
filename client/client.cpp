@@ -128,7 +128,7 @@ int main() {
       if (iter == global.lookup.end()) {
         cerr << "no p2p connection set up" << endl;
       }
-      strcpy(data.file_path, "/home/mike/clion.zip");
+      strcpy(data.file_path, "/home/mike/intel.tgz");
       LOG(data.file_path);
       COPY(data.sender, global.account);
       data.file_length = FileUDP::len(data.file_path);
@@ -138,7 +138,7 @@ int main() {
     } else if (req == "down2") {
       extern FileSendAccept::Raw data;
       string local_file_path;
-      local_file_path = "/home/mike/ggc.zip";
+      local_file_path = "/home/mike/ggi.tgz";
       LOG(local_file_path);
       LOG(data.file_path);
       LOG(data.file_length);

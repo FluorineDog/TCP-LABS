@@ -54,7 +54,7 @@ constexpr size_t ACK_SIZE = 32;
 constexpr size_t SINGLE_LENGTH = UDP_MAX_SIZE - sizeof(unsigned) * 2;
 constexpr size_t SLOTS = 2 * 1024;
 constexpr size_t INIT_WND = 2;
-constexpr size_t SOFT_WIND = 20;
+constexpr size_t SOFT_WIND = 15;
 constexpr size_t HARD_WIND = 20;
 constexpr size_t NAK_SIZE = 16;
 constexpr unsigned int INACTIVE = (unsigned)-1;
@@ -147,7 +147,7 @@ struct DatagramACK {
 };
 using std::vector;
 
-Jam jam(0.10);
+Jam jam(0.00);
 template <size_t max_interval, class T> class Window {
   static_assert(((max_interval - 1) & max_interval) == 0, "fake");
 
