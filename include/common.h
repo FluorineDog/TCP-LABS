@@ -34,7 +34,6 @@ using std::tuple;
 using boost::shared_ptr;
 using std::map;
 
-
 // #define COPY(dest, src) strncpy(dest, src, 32)
 template <int N> inline void COPY(char (&dest)[N], const string &src) {
   memcpy(dest, src.c_str(), N);
@@ -43,6 +42,8 @@ template <int N> inline void COPY(char (&dest)[N], const string &src) {
 template <int N> inline void COPY(char (&dest)[N], const char *src) {
   memcpy(dest, src, N);
 }
+
+
 
 #define ERROR_EXIT(status)                                                     \
   if (status == -1) {                                                          \
