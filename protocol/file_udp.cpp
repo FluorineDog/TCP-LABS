@@ -56,7 +56,7 @@ constexpr size_t SLOTS = 2 * 1024;
 constexpr size_t INIT_WND = 2;
 constexpr size_t SOFT_WIND = 20;
 constexpr size_t HARD_WIND = 20;
-constexpr size_t NAK_SIZE = 4;
+constexpr size_t NAK_SIZE = 16;
 constexpr unsigned int INACTIVE = (unsigned)-1;
 
 // constexpr size_t UDP_BUFFER_SIZE_TMP = (3 * 1024 * 1024);
@@ -97,6 +97,11 @@ struct DatagramACK {
     return true;
   }
   bool update(size_t seq_index) {
+    // cerr << main_ack << " || ";
+    // for (int nak : naks) {
+    //   cerr << nak << " ";
+    // }
+    // LOG(seq_index);
     if (main_ack == seq_index) {
       // if(main_ack >= 216960){
       // cerr << "update";
@@ -107,8 +112,13 @@ struct DatagramACK {
     } else if (main_ack < seq_index) {
       // new ack
       // size_t lost = main_ack;
-      for (auto &nak : naks) {
+      for (size_t i = 0; i < NAK_SIZE; ++i) {
+        auto &nak = naks[i];
         if (nak == INACTIVE) {
+          // avoid fake expand, which hurts correctness
+          if(main_ack + (NAK_SIZE - i) < seq_index){
+            return false;
+          }
           nak = main_ack;
           ++main_ack;
           if (main_ack == seq_index) {
@@ -279,18 +289,9 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         if (!isTimeout && main_ack < lost_queue.front().trigger_ack)
           break;
 
-        if (isTimeout) {
-          LOG(lost_queue.size());
-        }
 
         auto resent_seq_index = lost_queue.front().seq_index;
         lost_queue.pop();
-
-        if (isTimeout) {
-          LOG(lost_queue.size());
-          LOG(resent_seq_index);
-          LOG(total_reply.isAcked(resent_seq_index));
-        }
 
         if (total_reply.isAcked(resent_seq_index)) {
           continue;
@@ -298,7 +299,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
 
         Datagram send_data;
         // cerr << "queue resent " << resent_seq_index << endl;
-        LOG(resent_seq_index);
+        // LOG(resent_seq_index);
         send_data.seq_index = (unsigned)(resent_seq_index);
         COPY(send_data.data, buffer[resent_seq_index]);
         conn.send(&send_data, sizeof(send_data));
@@ -343,10 +344,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // total_reply = reply;
         {
           if (main_ack <= reply.main_ack - 2) {
-            LOG("---");
-            LOG(main_ack);
             for (auto nak : reply.naks) {
-              LOG(nak);
               if (nak == INACTIVE) {
                 break;
               }
@@ -359,6 +357,7 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
               }
             }
           }
+
           total_reply = reply;
         }
         // check if lock can be release
