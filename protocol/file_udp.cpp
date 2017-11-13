@@ -245,7 +245,8 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
   size_t send_seq_index = 0;
   conn.set_timeout(500'000);
 
-  ::fread(buffer.raw_ptr(), 1, 2 * SLOTS * SINGLE_LENGTH, sending_file);
+  int n = ::fread(buffer.raw_ptr(), 1, 2 * SLOTS * SINGLE_LENGTH, sending_file);
+  assert(n == 2 * SLOTS * SINGLE_LENGTH);
   {
     auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
     LOG(total_crc);
@@ -316,8 +317,9 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         total_reply = reply;
         // check if lock can be release
         if (reply.bottom_ack() >= write_edge) {
-          ::fread(buffer.raw_ptr(), 1, SLOTS, sending_file);
-          auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS * SINGLE_LENGTH);
+          int nread = ::fread(buffer.raw_ptr(), 1, SLOTS * SINGLE_LENGTH, sending_file);
+          auto total_crc = naive_hash(buffer.raw_ptr(), nread);
+          cerr << nread;
           LOG(total_crc);
           buffer.push(SLOTS);
           write_edge += SLOTS;
