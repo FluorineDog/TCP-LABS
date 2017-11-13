@@ -78,6 +78,11 @@ struct DatagramACK {
   // see as fake
   unsigned int naks[NAK_SIZE];
   size_t bottom_ack() { return naks[0] == INACTIVE ? main_ack : naks[0]; }
+  DatagramACK() : main_ack(0) {
+    for (auto &x : naks) {
+      x = INACTIVE;
+    }
+  }
   bool update(size_t seq_index) {
     if (main_ack == seq_index) {
       main_ack++;
@@ -109,7 +114,6 @@ struct DatagramACK {
     }
   }
 };
-
 using std::vector;
 
 Jam jam(0.001);
@@ -118,11 +122,15 @@ template <size_t max_interval, class T> class Window {
 
 public:
   Window(size_t limit, size_t interval = max_interval)
-      : base(0), limit(limit) {}
+      : base(0), limit(limit), data(max_interval) {}
 
   T &operator[](size_t i) {
-    assert(offset_begin() <= i);
-    assert(offset_end() > i);
+    if (!(offset_begin() <= i && offset_end() > i)) {
+      LOG(offset_begin());
+      LOG(i);
+      LOG(offset_end());
+      assert(false);
+    }
     return data[i % max_interval];
   }
 
@@ -131,28 +139,30 @@ public:
   size_t offset_end() { return std::min(base + max_interval, limit); }
   void push(size_t n = 1) { base += n; }
   void push_to(size_t beg) { base = std::max(beg, base); }
-  T &raw_ptr() { return data[base % max_interval]; }
+  T &raw_ptr() {
+    assert(base % (max_interval / 2) == 0);
+    return data[base % max_interval];
+  }
 
 private:
-  vector<T> data;
   size_t base;
   size_t limit;
+  vector<T> data;
 };
+
 #include <deque>
 static void receiver(UDP server, FILE *local_file, size_t length) {
   // assume 16 rounds is OK
   bool isFirstRecv = true;
   DatagramACK reply;
-  memset(&reply, 0, sizeof(reply));
   size_t seq_index_total = (length - 1) / SINGLE_LENGTH + 1;
   Window<SLOTS * 2, char[SINGLE_LENGTH]> buffer(seq_index_total);
   DogAddr addr;
-  std::deque<size_t> resent_packet;
   size_t ack_edge = 0;
   // based on packet
   int status;
-  size_t write_edge = SINGLE_LENGTH;
-  server.timeout(1000'000);
+  size_t write_edge = SLOTS;
+  server.set_timeout(1000'000);
   while (true) {
     Datagram send_data;
     auto status = isFirstRecv
@@ -162,18 +172,32 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
       cerr << "timeout!!";
       LOG(send_data.seq_index);
       continue;
+    } else if (isFirstRecv) {
+      cerr << "handshake";
+      server.connect(addr.get_ip(), addr.get_port());
+      isFirstRecv = false;
     }
+
     auto isAckValid = reply.update(send_data.seq_index);
     if (isAckValid) {
       COPY(buffer[send_data.seq_index], send_data.data);
+      // LOG(reply.bottom_ack());
       if (reply.bottom_ack() >= write_edge) {
         auto write_length = std::min(length, SINGLE_LENGTH * write_edge);
         write_length -= buffer.offset_begin() * SINGLE_LENGTH;
         ::fwrite(buffer.raw_ptr(), 1, write_length, local_file);
+        LOG(buffer.raw_ptr());
+        LOG(write_edge);
+        LOG(reply.bottom_ack());
+        LOG(write_length);
         auto total_crc = naive_hash(buffer.raw_ptr(), write_length);
         LOG(total_crc);
-        write_edge += SLOTS;
-        buffer.push(SINGLE_LENGTH);
+        write_edge =
+            std::min((length - 1) / SINGLE_LENGTH + 1, write_edge + SLOTS);
+        buffer.push(SLOTS);
+        if (buffer.empty()) {
+          goto endOfRecv;
+        }
       }
     } else {
       cerr << "dup!";
@@ -182,7 +206,24 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
     }
     server.send(&reply, sizeof(reply));
   }
+endOfRecv:
+  server.set_timeout(500'000);
+  while (true) {
+    Datagram send_data;
+    auto status = server.recv(&send_data, sizeof(send_data));
+    if (!status) {
+      break;
+    }
+    server.send(&reply, sizeof(reply));
+  }
+  return;
 }
+
+// static void sender(UDP conn, FILE *sending_file, size_t length) {
+//   Window<char[SINGLE_LENGTH]> buffer;
+//   ::fread(buffer.raw_ptr(), 1, SLOTS * SINGLE_LENGTH, sending_file);
+// }
+
 // for (size_t seq_base = 0; seq_base < length; seq_base += UDP_BUFFER_SIZE)
 // {
 //   size_t seq_end = std::min(length, seq_base + UDP_BUFFER_SIZE);
@@ -237,49 +278,44 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
 // }
 
 static void sender(UDP conn, FILE *sending_file, size_t length) {
-  Window<size_t>
+  std::vector<char> buffer(SINGLE_LENGTH * SLOTS * 1);
+  std::vector<size_t> recv_count(SLOTS);
+  size_t last_index = 0;
+  conn.set_timeout(100'000);
+  auto tbeg = dog_timer();
+  for (size_t seq_base = 0; seq_base < length;
+       seq_base += (SINGLE_LENGTH * SLOTS)) {
+    size_t seq_end = std::min(length, seq_base + (SINGLE_LENGTH * SLOTS));
+    auto nread =
+        ::fread(buffer.data(), 1, (SINGLE_LENGTH * SLOTS), sending_file);
+    auto total_crc = naive_hash(buffer.data(), seq_end - seq_base);
+    LOG(total_crc);
+    for (size_t seq = seq_base; seq < seq_end;) {
+      size_t seq_index = seq / SINGLE_LENGTH;
+      Datagram send_data;
+      send_data.seq_index = (unsigned)(seq_index);
+      COPY(send_data.data, buffer.data() + seq - seq_base);
+      conn.send(&send_data, sizeof(send_data));
+      DatagramACK ack_data;
+      auto status = conn.recv(&ack_data, sizeof(ack_data));
+      if (!status) {
+        cerr << "pack lost";
+        LOG(seq_index);
+        continue;
+      }
+      if (ack_data.main_ack - 1 == seq_index) {
+        seq += SINGLE_LENGTH;
+        continue;
+      } else {
+        cerr << "ackdup";
+        usleep(1000);
+        LOG(ack_data.main_ack - 1);
+        LOG(seq_index);
+      }
+    }
+  }
+  cerr << "pertend sending";
+  LOG(dog_timer() - tbeg);
 }
 
-// static void sender(UDP conn, FILE *sending_file, size_t length) {
-//   std::vector<char> buffer(UDP_BUFFER_SIZE * UDP_SLOT_COUNT);
-//   std::vector<size_t> recv_count(UDP_SLOT_COUNT);
-//   size_t last_index = 0;
-//   conn.set_timeout(100'000);
-//   auto tbeg = dog_timer();
-//   for (size_t seq_base = 0; seq_base < length; seq_base +=
-//   UDP_BUFFER_SIZE)
-//   {
-//     size_t seq_end = std::min(length, seq_base + UDP_BUFFER_SIZE);
-//     auto nread = ::fread(buffer.data(), 1, UDP_BUFFER_SIZE,
-//     sending_file);
-//     auto total_crc = naive_hash(buffer.data(), seq_end - seq_base);
-//     LOG(total_crc);
-//     for (size_t seq = seq_base; seq < seq_end;) {
-//       size_t seq_index = seq / UDP_DATA_SINGLE;
-//       Datagram send_data;
-//       send_data.seq_index = (unsigned)(seq_index);
-//       COPY(send_data.data, buffer.data() + seq - seq_base);
-//       conn.send(&send_data, sizeof(send_data));
-//       DatagramACK ack_data;
-//       auto status = conn.recv(&ack_data, sizeof(ack_data));
-//       if (!status) {
-//         cerr << "pack lost";
-//         LOG(seq_index);
-//         continue;
-//       }
-//       if (ack_data.seq_index[0] == seq_index) {
-//         seq += UDP_DATA_SINGLE;
-//         continue;
-//       } else {
-//         cerr << "ackdup";
-//         usleep(1000);
-//         LOG(ack_data.seq_index[0]);
-//         LOG(seq_index);
-//       }
-//     }
-//   }
-//   cerr << "pertend sending";
-//   LOG(dog_timer() - tbeg);
-// }
-//
 static_assert(sizeof(SINGLE_LENGTH) % 8 == 0, "alignment incorrect");

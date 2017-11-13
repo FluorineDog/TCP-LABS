@@ -92,7 +92,7 @@ void file_accept() {
   LOG(data.sender);
   data.udp_port = FileUDP::open_receive_port(local_file_path, data.file_length);
   auto iter = global.lookup.find(data.sender);
-  if(iter == global.lookup.end()){
+  if (iter == global.lookup.end()) {
     cerr << "p2p not set";
   }
   data.send_data(iter->second);
@@ -121,6 +121,62 @@ int main() {
   while (cin >> req) {
     // wait for event
     if (false) {
+    } else if (req == "up2") {
+      FileSendRequest::Raw data{};
+      strcpy(data.receiver, "mike");
+      auto iter = global.lookup.find(data.receiver);
+      if (iter == global.lookup.end()) {
+        cerr << "no p2p connection set up" << endl;
+      }
+      strcpy(data.file_path, "/home/mike/clion.zip");
+      LOG(data.file_path);
+      COPY(data.sender, global.account);
+      data.file_length = FileUDP::len(data.file_path);
+      LOG(data.file_length);
+      data.send_data(iter->second);
+
+    } else if (req == "down2") {
+      extern FileSendAccept::Raw data;
+      string local_file_path;
+      local_file_path = "/home/mike/ggc.zip";
+      LOG(local_file_path);
+      LOG(data.file_path);
+      LOG(data.file_length);
+      LOG(data.sender);
+      data.udp_port =
+          FileUDP::open_receive_port(local_file_path, data.file_length);
+      auto iter = global.lookup.find(data.sender);
+      if (iter == global.lookup.end()) {
+        cerr << "p2p not set";
+      }
+      data.send_data(iter->second);
+    } else if (req == "up") {
+      LoginIn::Raw data;
+      strcpy(data.account, "fluorine");
+      strcpy(data.pass_md5, "wang");
+      global.account = data.account;
+      global.passwd = data.pass_md5;
+      {
+        std::lock_guard<std::mutex> lck(send_mutex);
+        data.send_data(client);
+      }
+      {
+        P2PRequest::Raw data;
+        COPY(data.sender, global.account);
+        strcpy(data.receiver, "mike");
+        // data.listener_ip
+        data.listener_port = global.self_server.getsockname().get_port();
+        std::lock_guard<std::mutex> lck(send_mutex);
+        data.send_data(client);
+      }
+    } else if (req == "down") {
+      LoginIn::Raw data;
+      strcpy(data.account, "mike");
+      strcpy(data.pass_md5, "wang");
+      global.account = data.account;
+      global.passwd = data.pass_md5;
+      std::lock_guard<std::mutex> lck(send_mutex);
+      data.send_data(client);
     } else if (req == "register") {
       // onEvent click
       // easily parallel

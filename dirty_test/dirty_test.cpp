@@ -14,6 +14,11 @@ using namespace std;
 
 TEST(libcrypto, base) {}
 
+TEST(vector_array, base){
+  vector<char[1000]> fake(2);
+  memset(fake[0], 23, 2000);
+  EXPECT_EQ(23, fake[1][233]);
+}
 // TEST(sqlite, base) {
 //   sqlite3 *db;
 //   char *errmsg;

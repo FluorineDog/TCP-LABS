@@ -72,7 +72,9 @@ public:
     auto len = addrlen();
     int status = ::recvfrom(fd, buf, size, 0, SAP(addr.raw()), &len);
     if (status < 0) {
-      assert(errno == EAGAIN);
+      if(errno != EAGAIN){
+        LOG(strerror(errno));
+      }
       return false;
     }
     return true;
