@@ -96,6 +96,10 @@ struct DatagramACK {
   }
   bool update(size_t seq_index) {
     if (main_ack == seq_index) {
+      // if(main_ack >= 216960){
+      // cerr << "update";
+      // LOG(main_ack);
+      // }
       main_ack++;
       return true;
     } else if (main_ack < seq_index) {
@@ -127,7 +131,7 @@ struct DatagramACK {
 };
 using std::vector;
 
-Jam jam(0.001);
+Jam jam(0.000);
 template <size_t max_interval, class T> class Window {
   static_assert(((max_interval - 1) & max_interval) == 0, "fake");
 
@@ -189,6 +193,7 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
       isFirstRecv = false;
     }
 
+    // LOG(send_data.seq_index);
     auto isAckValid = reply.update(send_data.seq_index);
     if (isAckValid) {
       COPY(buffer[send_data.seq_index], send_data.data);
@@ -215,6 +220,7 @@ static void receiver(UDP server, FILE *local_file, size_t length) {
     server.send(&reply, sizeof(reply));
   }
 endOfRecv:
+  server.send(&reply, sizeof(reply));
   server.set_timeout(500'000);
   while (true) {
     Datagram send_data;
@@ -238,10 +244,8 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
   std::queue<LostPack> lost_queue;
   size_t send_seq_index = 0;
   conn.set_timeout(500'000);
-  bool isTimeout = false;
 
   ::fread(buffer.raw_ptr(), 1, 2 * SLOTS * SINGLE_LENGTH, sending_file);
-
   {
     auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS);
     LOG(total_crc);
@@ -252,7 +256,8 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
     LOG(total_crc);
   }
 
-  size_t write_edge = std::max(max_seq_index, SLOTS);
+  bool isTimeout = false;
+  size_t write_edge = std::min(max_seq_index, SLOTS);
   while (true) {
     auto main_ack = total_reply.main_ack;
     // fix lost packet
@@ -289,8 +294,8 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
     }
 
     // to avoid congestion
-    if (send_seq_index >= max_seq_index &&
-        send_seq_index >= main_ack + SOFT_WIND &&
+    if (send_seq_index >= max_seq_index ||
+        send_seq_index >= main_ack + SOFT_WIND ||
         send_seq_index >= total_reply.bottom_ack() + HARD_WIND) {
       // recv for the godness
       DatagramACK reply;
@@ -299,6 +304,8 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // timeout
         // emmmmm what the hell...
         cerr << "timeout";
+        LOG(main_ack);
+        LOG(send_seq_index);
         isTimeout = true;
         // goto first section
         // block wind growth
@@ -308,14 +315,18 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
         // assume no reordered ack
         total_reply = reply;
         // check if lock can be release
-        if (reply.bottom_ack() > write_edge) {
+        if (reply.bottom_ack() >= write_edge) {
           ::fread(buffer.raw_ptr(), 1, SLOTS, sending_file);
           auto total_crc = naive_hash(buffer.raw_ptr(), SLOTS);
           LOG(total_crc);
           buffer.push(SLOTS);
           write_edge += SLOTS;
         }
+        if(reply.bottom_ack() >= max_seq_index){
+          return;
+        }
       }
+      continue;
     }
     // sending main data
     Datagram send_data;
@@ -364,5 +375,4 @@ static void sender(UDP conn, FILE *sending_file, size_t length) {
 // }
 // cerr << "pertend sending";
 // LOG(dog_timer() - tbeg);
-
 static_assert(sizeof(SINGLE_LENGTH) % 8 == 0, "alignment incorrect");

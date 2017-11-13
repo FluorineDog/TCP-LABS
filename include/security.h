@@ -14,12 +14,12 @@ inline unsigned int naive_hash(const void *data, int size) {
   assert((size_t)data % 1 == 0);
   assert(size % sizeof(T) == 0);
   size /= sizeof(T);
-  T crc = 0;
+  unsigned crc = 0;
   T *data_ = (T *)data;
   for (int i = 0; i < size; ++i) {
     crc = _mm_crc32_u64(crc, data_[i]);
   }
-  return (unsigned)crc;
+  return crc;
 }
 
 #endif // DOG_SECURITY_H_
