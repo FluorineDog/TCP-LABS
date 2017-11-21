@@ -216,7 +216,7 @@ public:
   virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
-      constexpr auto id = DataFlowType::Type_LoginIn;
+      constexpr auto id = DataFlowType::Type_RecoverPassword;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
     }
