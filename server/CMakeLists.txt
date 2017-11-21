@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.5)
 project(dog_chat_server)
 add_executable(chat_server server.cpp)
 target_link_libraries(chat_server pthread)
