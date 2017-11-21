@@ -132,3 +132,42 @@ void P2PRequest::action(TCP conn) {
     OpStatus::Raw{-1, "User offline"}.send_data(conn);
   }
 }
+
+void RecoverPassword::action(TCP conn) {
+  LOG((int)conn);
+  // in server
+  // check if is in atabase
+  cerr << "get request account:" << raw.account << endl;
+  cerr << "get nickname:" << raw.nickname << endl;
+  // seems to have put it into db
+  if (lookup.find(raw.account) != lookup.end()) {
+    OpStatus::Raw data{-1, "Logged in elsewhwere"};
+    data.send_data(conn);
+    return;
+  }
+  static sqlite::query q(
+      sql, "SELECT password, salt, nickname from accounts where account=?");
+  q.clear();
+   q % raw.account;
+  shared_ptr<sqlite::result> result = q.get_result();
+  cerr << "$" << result->get_row_count() << "$" << endl;
+  if (result->next_row()) {
+    string nickname = result->get_string(2);
+    string salt = result->get_string(1);
+    if (nickname == raw.nickname) {
+      string password = result->get_string(0);
+      static sqlite::execute exe(
+          sql, "UPDATE accounts SET password=?, salt=? where account=?");
+      exe.clear();
+      exe % raw.new_pass_md5 % salt % raw.account;
+      exe();
+      OpStatus::Raw data{0, "recover succeed"};
+      // conn_to_account[conn] = raw.account;
+      data.send_data(conn);
+      return;
+    }
+  }
+  OpStatus::Raw data{-1, "wrong account or email"};
+  data.send_data(conn);
+  return;
+}

@@ -97,6 +97,13 @@ void file_accept() {
   }
   data.send_data(iter->second);
 }
+void recoverPassword(TCP conn){
+  RecoverPassword::Raw data;
+  cin >> data.account;
+  cin >> data.new_pass_md5; 
+  cin >> data.nickname;
+  data.send_data(conn);
+}
 
 int main() {
   cout << "client" << endl;
@@ -181,6 +188,8 @@ int main() {
       // onEvent click
       // easily parallel
       registion(client);
+    } else if (req == "recover") {
+      recoverPassword(client);
     } else if (req == "login") {
       // onEvent click
       // easily parallel

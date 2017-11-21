@@ -24,6 +24,9 @@ std::unique_ptr<RawData> RawData::get_type(TCP &conn) {
     CLIENTCASE(P2PLogin);
     CLIENTCASE(FileSendRequest);
     CLIENTCASE(FileSendAccept);
+    SERVERCASE(RecoverPassword);
+    // SERVERCASE(FindActiveRequest);
+    // CLIENTCASE(FindActiveReply);
   default:
     cerr << "unknown typeid" << endl;
     exit(-1);
