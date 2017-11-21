@@ -216,7 +216,7 @@ public:
   virtual void action(TCP conn) override;
   struct Raw {
     void send_data(TCP conn) {
-      constexpr auto id = DataFlowType::Type_RecoverPassword;
+      constexpr auto id = DataFlowType::Type_LoginIn;
       conn.writen(&id, sizeof(id));
       conn.writen(this, sizeof(raw));
     }
@@ -226,42 +226,37 @@ public:
   } raw;
 };
 
-// class FindActiveRequest : public RawData {
-// public:
-//   virtual int read_data(TCP conn) override {
-//     return conn.readn(&raw, sizeof(raw));
-//   }
-//   virtual void action(TCP conn) override;
-//   struct Raw {
-//     void send_data(TCP conn) {
-//       constexpr auto id = DataFlowType::Type_FindActiveRequest;
-//       conn.writen(&id, sizeof(id));
-//       conn.writen(this, sizeof(raw));
-//     }
-//     char sender[32];
-//   } raw;
-// };
+class FindActiveRequest : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      constexpr auto id = DataFlowType::Type_FindActiveRequest;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char sender[32];
+  } raw;
+};
 
-// #include <array>
-// class FindActiveReply : public RawData {
-// public:
-//   virtual int read_data(TCP conn) override {
-//     size_t count;
-//     conn.readn(&count, sizeof(size_t));
-//     raw.active_list.resize(count);
-//     return conn.readn(raw.active_list.data(), count * sizeof(char[32]));
-//   }
-//   virtual void action(TCP conn) override;
-//   struct Raw {
-//     void send_data(TCP conn) {
-//       constexpr auto id = DataFlowType::Type_FindActiveReply;
-//       conn.writen(&id, sizeof(id));
-//       size_t count = active_list.size();
-//       conn.writen(&count, sizeof(size_t));
-//       conn.writen(active_list.data(), count * sizeof(char[32]));
-//     }
-//     std::vector<char[32]> active_list;
-//   } raw;
-// };
+class FindActiveReply : public RawData {
+public:
+  virtual int read_data(TCP conn) override {
+    return conn.readn(&raw, sizeof(raw));
+  }
+  virtual void action(TCP conn) override;
+  struct Raw {
+    void send_data(TCP conn) {
+      constexpr auto id = DataFlowType::Type_FindActiveReply;
+      conn.writen(&id, sizeof(id));
+      conn.writen(this, sizeof(raw));
+    }
+    char peer[32];
+    bool isActive;
+  } raw;
+};
 
 #endif // DOG_DATAFLOW_H_

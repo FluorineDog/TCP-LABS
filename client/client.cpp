@@ -30,6 +30,14 @@ void registion(TCP conn) {
   // });
 }
 
+void active(TCP conn) {
+  FindActiveRequest::Raw data;
+  COPY(data.sender, global.account);
+  std::lock_guard<std::mutex> lck(send_mutex);
+  data.send_data(conn);
+}
+
+
 void log_in(TCP conn) {
   LoginIn::Raw data;
   cin >> data.account;
@@ -194,6 +202,8 @@ int main() {
       // onEvent click
       // easily parallel
       log_in(client);
+    } else if (req == "active") {
+      active(client);
     } else if (req == "send") {
       sendmsg(client);
     } else if (req == "p2p") {
@@ -218,4 +228,10 @@ int main() {
   //     cout << ref_n << "***" << ref_str << endl;
   //   }
   // }
+}
+
+
+void FindActiveReply::action(TCP conn) {
+  LOG(raw.peer);
+  LOG(raw.isActive);
 }

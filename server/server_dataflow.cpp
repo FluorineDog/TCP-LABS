@@ -171,3 +171,18 @@ void RecoverPassword::action(TCP conn) {
   data.send_data(conn);
   return;
 }
+
+
+
+void FindActiveRequest::action(TCP conn) {
+  for(auto p:lookup){
+    auto acc = p.first;
+    if(acc == raw.sender){
+      continue;
+    }
+    FindActiveReply::Raw data;
+    data.isActive = true;
+    COPY(data.peer, acc);
+    data.send_data(conn);
+  }
+}
