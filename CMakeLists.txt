@@ -16,5 +16,5 @@ add_subdirectory(protocol)
 set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(client)
 add_subdirectory(server)
-add_subdirectory(dirty_test)
+#add_subdirectory(dirty_test)
 

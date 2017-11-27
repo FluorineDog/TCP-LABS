@@ -12,7 +12,6 @@ using std::cin;
 using std::map;
 using std::string;
 using std::tuple;
-
 sqlite::connection sql("data/server.db");
 // std::map<int, string> conn_to_account;
 std::map<string, int> lookup;

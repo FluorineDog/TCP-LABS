@@ -14,6 +14,12 @@
 #include "../protocol/gen_dataflow.h"
 
 extern sqlite::connection sql;
+#include <cryptopp/aes.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/modes.h>
+
+byte key[CryptoPP::AES::DEFAULT_KEYLENGTH] = "fluorinedoghere",
+     iv[CryptoPP::AES::BLOCKSIZE];
 
 // in server
 void Registion::action(TCP conn) {
@@ -91,27 +97,63 @@ void SendMessage::action(TCP conn) {
     TCP receiver_conn(iter->second);
     raw.send_data(receiver_conn);
   } else {
+
+    string encryptedMsg;
+    string plain = raw.message;
     //
-    static sqlite::execute cmd(sql, "INSERT INTO message VALUES(NULL,?,?,?,?)");
+    CryptoPP::AES::Encryption aesEncryption(key,
+                                            CryptoPP::AES::DEFAULT_KEYLENGTH);
+    CryptoPP::CBC_Mode_ExternalCipher::Encryption cbcEncryption(aesEncryption,
+                                                                iv);
+
+    CryptoPP::StreamTransformationFilter stfEncryptor(
+        cbcEncryption, new CryptoPP::StringSink(encryptedMsg));
+    stfEncryptor.Put(reinterpret_cast<const unsigned char *>(plain.c_str()),
+                     sizeof(plain.size() + 1));
+    stfEncryptor.MessageEnd();
+    //
+    static sqlite::execute cmd(sql, "INSERT INTO message VALUES(NULL,?,?,?,?,?)");
     cmd.clear();
-    cmd % raw.sender % raw.receiver % raw.timestamp % raw.message;
+    cmd % raw.sender % raw.receiver % raw.timestamp ;
+    cmd % (int)encryptedMsg.size();
+    cmd % encryptedMsg;
     cmd();
   }
 }
 
 void send_offline_message(TCP conn, const string &receiver) {
-  static sqlite::query q(sql, "SELECT rowid, receiver, timestamp, message"
+  static sqlite::query q(sql, "SELECT rowid, receiver, timestamp, messagesize, message"
                               " FROM message WHERE receiver=?");
   q.clear();
   q % receiver;
   auto result = q.get_result();
 
   SendMessage::Raw data;
+
   COPY(data.receiver, receiver);
   while (result->next_row()) {
     COPY(data.sender, result->get_string(1));
     data.timestamp = result->get_int64(2);
-    COPY(data.message, result->get_string(3));
+    // COPY(data.message, result->get_string(3));
+    int messagesize = result->get_int(3);
+    string encryptedMsg = result->get_string(4);
+    string decryptedMsg;
+    CryptoPP::AES::Decryption aesDecryption(key,
+                                            CryptoPP::AES::DEFAULT_KEYLENGTH);
+    CryptoPP::CBC_Mode_ExternalCipher::Decryption cbcDecryption(aesDecryption,
+                                                                iv);
+    CryptoPP::StreamTransformationFilter stfDecryptor(
+        cbcDecryption, new CryptoPP::StringSink(decryptedMsg));
+    stfDecryptor.Put(reinterpret_cast<const unsigned char *>(encryptedMsg.c_str()),
+                     messagesize);
+    stfDecryptor.MessageEnd();
+
+    COPY(data.message, decryptedMsg);
+    // memcpy(data.message, decrypteMsg.data(), messagesize);
+    // for(int i = 0; i < 16; ++i){
+    //   cerr << (int)decryptedMsg[i] << " ";
+    // }
+
     data.send_data(conn);
   }
   static sqlite::execute cmd(sql, "DELETE FROM message WHERE receiver=?");
@@ -148,7 +190,7 @@ void RecoverPassword::action(TCP conn) {
   static sqlite::query q(
       sql, "SELECT password, salt, nickname from accounts where account=?");
   q.clear();
-   q % raw.account;
+  q % raw.account;
   shared_ptr<sqlite::result> result = q.get_result();
   cerr << "$" << result->get_row_count() << "$" << endl;
   if (result->next_row()) {
@@ -172,12 +214,10 @@ void RecoverPassword::action(TCP conn) {
   return;
 }
 
-
-
 void FindActiveRequest::action(TCP conn) {
-  for(auto p:lookup){
+  for (auto p : lookup) {
     auto acc = p.first;
-    if(acc == raw.sender){
+    if (acc == raw.sender) {
       continue;
     }
     FindActiveReply::Raw data;

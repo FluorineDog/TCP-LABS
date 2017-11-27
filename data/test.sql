@@ -10,5 +10,6 @@ CREATE TABLE message (
 	sender text,
 	receiver text,
 	timestamp integer,
+	messagesize integer,
 	message text 
 );
